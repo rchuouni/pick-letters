@@ -154,14 +154,40 @@ table.xl td.v.blank{background:repeating-linear-gradient(45deg,transparent 0 6px
 textarea{min-height:110px;font-family:var(--f-mono);font-size:12px}
 .toast{font-size:13px;color:var(--ok);font-weight:700}
 .toast.err{color:var(--warn)}
+.topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.faqbtn{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.faqbtn .q{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-family:var(--f-mono)}
+dialog.faq{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0;width:min(760px,calc(100vw - 32px));max-height:min(86vh,900px)}
+dialog.faq::backdrop{background:rgba(10,16,24,.45)}
+.faqin{display:flex;flex-direction:column;max-height:min(86vh,900px)}
+.faqhead{display:flex;flex-direction:column;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+.faqhead .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.faqhead h2{font-size:16px;color:var(--ink);letter-spacing:.02em}
+.faqcats{display:flex;gap:4px;flex-wrap:wrap}
+.faqcats button{font-size:12px;padding:2px 10px;border-radius:999px}
+.faqcats button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.faqbody{overflow:auto;padding:8px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.faqgroup h3{font-size:12px;color:var(--muted);letter-spacing:.08em;margin:6px 0 4px}
+.faqitem{border-bottom:1px solid var(--line)}
+.faqitem summary{cursor:pointer;padding:9px 2px;font-weight:500;list-style:none;display:flex;gap:8px}
+.faqitem summary::-webkit-details-marker{display:none}
+.faqitem summary::before{content:"Q";font-family:var(--f-mono);font-weight:700;color:var(--accent);flex:none}
+.faqitem[open] summary{color:var(--accent)}
+.faqitem .a{padding:0 2px 12px 22px;color:var(--ink);font-size:13.5px;line-height:1.7;max-width:65ch}
+.faqitem .a p{margin:0 0 6px}
+.faqitem .a ul{margin:0 0 6px;padding-left:1.2em}
+.faqempty{color:var(--muted);font-size:13px;padding:12px 0}
 @media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background-color .15s}}
 </style>
 
 <div class="wrap">
   <div class="top">
     <h1>PDF抜き出し　事前設定</h1>
-    <div class="steps" aria-label="作業の流れ">
-      <span class="on">事前設定</span><span>PDFを読み込む</span><span>Excelへコピー</span>
+    <div class="topright">
+      <div class="steps" aria-label="作業の流れ">
+        <span class="on">事前設定</span><span>PDFを読み込む</span><span>Excelへコピー</span>
+      </div>
+      <button class="faqbtn" id="btnFaq" aria-haspopup="dialog"><span class="q">?</span>よくある質問</button>
     </div>
   </div>
 
@@ -264,6 +290,20 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:12px}
     </details>
   </section>
 </div>
+
+<dialog class="faq" id="faqDlg" aria-labelledby="faqTitle">
+  <div class="faqin">
+    <div class="faqhead">
+      <div class="row">
+        <h2 id="faqTitle">よくある質問</h2>
+        <button id="faqClose" class="ghost" aria-label="閉じる">閉じる</button>
+      </div>
+      <input type="text" id="faqSearch" placeholder="言葉で探す（例：コピー、α、保存）" aria-label="質問を言葉で探す">
+      <div class="faqcats" id="faqCats" role="group" aria-label="分類"></div>
+    </div>
+    <div class="faqbody" id="faqBody"></div>
+  </div>
+</dialog>
 
 <script>
 (function(){
@@ -1002,6 +1042,95 @@ document.getElementById("btnImport").onclick = () => importText(jsonBox.value);
 const jsonFile = document.getElementById("jsonFile");
 document.getElementById("btnJsonFile").onclick = () => jsonFile.click();
 jsonFile.onchange = async () => { const f = jsonFile.files[0]; if (f) importText(await f.text()); jsonFile.value = ""; };
+
+/* ---------- よくある質問 ---------- */
+const FAQ = [
+  ["はじめに", "このページは何をするものですか？", "<p>PDFの決まった場所から文字を拾い、Excelに貼り付ける順番で並べるための「設定」を作る画面です。PDFの種類（請求書A、注文書Bなど）ごとに、どの範囲から、どんな形の文字を、何列目に入れるかを決めて保存します。</p>"],
+  ["はじめに", "お金はかかりますか？", "<p>かかりません。サーバーやAPIを使わず、ブラウザの中だけで動きます。</p>"],
+  ["はじめに", "どのブラウザで使えますか？", "<p>Chrome または Edge の最新版をおすすめします。Safari や Firefox でも基本的には動きますが、コピーの動きが少し違うことがあります。</p>"],
+  ["はじめに", "インターネットにつながっていないと使えませんか？", "<p>今の版は、PDFを読む部品（pdf.js）と文字の書体をネットから読み込むため、ネット接続が必要です。PDFの中身がネットに送られることはありません。</p>"],
+  ["はじめに", "スマートフォンでも使えますか？", "<p>表示はできますが、範囲をドラッグする操作はパソコンのマウスのほうが正確です。設定作業はパソコンで行ってください。</p>"],
+  ["はじめに", "最初に表示される請求書は何ですか？", "<p>動作確認用の<b>架空のサンプル</b>です。実在の会社とは関係ありません。「見本PDFを選ぶ」で自分のPDFに差し替えられます。</p>"],
+
+  ["PDF", "どんなPDFが使えますか？", "<p>文字が埋め込まれたPDF（PDF上で文字を選択・コピーできるもの）が使えます。Word や Excel から書き出したPDF、会計ソフトが作るPDFなどが当てはまります。</p>"],
+  ["PDF", "スキャンしたPDFは使えますか？", "<p>使えません。スキャンしたPDFは文字ではなく画像なので、拾う文字がありません。読み込んだときに「文字が見つかりませんでした」と出たら、このケースです。</p>"],
+  ["PDF", "2ページ以上あるPDFはどうなりますか？", "<p>1ページ目だけを使います。2ページ目以降は無視されます。</p>"],
+  ["PDF", "パスワード付きのPDFは使えますか？", "<p>開けません。パスワードを外したPDFを用意してください。</p>"],
+  ["PDF", "読み込んだPDFはどこかに保存されますか？", "<p>保存されません。ページを閉じたり再読み込みしたりすると消えます。サーバーに送られることもありません。</p>"],
+  ["PDF", "見本PDFを差し替えると、設定は消えますか？", "<p>消えません。範囲はページの大きさに対する割合で覚えているので、同じ種類のPDFに差し替えても同じ場所を指します。結果がその場で新しいPDFの内容に変わるので、別の月の請求書で確認するのにも使えます。</p>"],
+  ["PDF", "用紙サイズが違うPDFでも同じ場所を拾えますか？", "<p>範囲はページの幅・高さに対する割合で覚えているので、A4とレターのように少し違う程度なら同じ場所を指します。ただし、レイアウト自体が違う帳票では、別の設定を作ってください。</p>"],
+
+  ["範囲の指定", "範囲はどうやって指定しますか？", "<ul><li>列カードの余白をダブルクリックします（または「範囲を指定する」ボタン）。</li><li>左のページ上をドラッグして、拾いたい場所を囲みます。</li><li>終わったら <kbd>Esc</kbd> か「指定を終える」を押します。</li></ul>"],
+  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（列番号や結果が表示されているあたり）をダブルクリックしてください。下のExcel表の列をダブルクリックしても入れます。空欄の列は範囲を持たないので、指定に入りません。</p>"],
+  ["範囲の指定", "枠の位置や大きさを直したい。", "<ul><li>枠の中をドラッグすると移動します。</li><li>四隅と辺の小さな四角をドラッグすると大きさが変わります。</li><li>矢印キーで少しずつ移動、<kbd>Shift</kbd>＋矢印キーで少しずつ大きさを変えられます。</li><li>枠の外をドラッグすると、最初から引き直せます。</li></ul>"],
+  ["範囲の指定", "細かい場所がうまく囲めません。", "<p>「＋」で拡大してから囲んでください。<kbd>Ctrl</kbd>を押しながらマウスホイールを回しても拡大・縮小できます。「幅に合わせる」「全体を表示」で元の大きさに戻せます。</p>"],
+  ["範囲の指定", "どこまで囲めば、その文字が範囲に入りますか？", "<p>文字のかたまりの<b>中心</b>が枠の中にあれば、範囲に入ったと判定します。範囲指定中は、範囲に入った文字が薄く色付きで表示されるので、それを目安にしてください。</p>"],
+  ["範囲の指定", "範囲を少し広めに取ってもいいですか？", "<p>はい。拾う文字の規則（日付・金額・その他など）で絞り込むので、多少広めに囲んでも大丈夫です。逆に、月によって位置が少しずれる帳票では、広めに取っておくほうが安定します。</p>"],
+  ["範囲の指定", "枠の色は何を表していますか？", "<p>列ごとの色です。列カードの左端の色と、ページ上の枠の色が対応しています。枠の上のラベルには、Excelの列（A、B…）と見出しが出ます。</p>"],
+
+  ["拾う文字の規則", "「拾う文字の規則」はどれを選べばいいですか？", "<ul><li>日付・金額・郵便番号・電話番号：その形の文字だけを拾います。</li><li>範囲内の1行ずつ：囲んだ場所の行をそのまま拾います。会社名など決まった形がないものに向きます。</li><li>その他：α・β・γ で文字の形を自分で作ります。品番や請求番号に向きます。</li></ul>"],
+  ["拾う文字の規則", "「その他」の α・β・γ とは何ですか？", "<ul><li>α：英字1文字（A〜Z、a〜z）</li><li>β：数字1文字（0〜9）</li><li>γ：記号1文字（- / . ¥ # % など）</li><li>…：直前の種類が1文字以上いくつでも続く</li></ul><p>例：<code>ααα-ββββ-ββββ</code> は INV-2026-0142 のような文字を拾います。</p>"],
+  ["拾う文字の規則", "α・β・γ をキーボードで打てません。", "<p>入力欄の下の「α 英字」「β 数字」「γ 記号」「… 何文字でも」ボタンを押すと、カーソルの位置に入ります。日本語入力で「あるふぁ」「べーた」「がんま」と打って変換しても入ります。</p>"],
+  ["拾う文字の規則", "桁数が決まっていない番号を拾いたい。", "<p>「…」を使います。例えば <code>αβ…</code> は「英字1文字＋数字が何桁でも」で、T1234567890123 のような登録番号を拾えます。</p>"],
+  ["拾う文字の規則", "「-」や「年」など、決まった文字を含めたい。", "<p>そのまま入力してください。α・β・γ・… 以外の文字は、その文字そのものとして探します。例：<code>β…年β…月β…日</code></p>"],
+  ["拾う文字の規則", "全角の数字や英字も拾えますか？", "<p>拾えます。PDFの文字は全角・半角をそろえてから探すので、「ＡＢ－１２０３」も「AB-1203」として見つかります。</p>"],
+  ["拾う文字の規則", "長い番号の一部だけが拾われてしまわないか心配です。", "<p>英字や数字で始まる・終わる形は、前後に同じ種類の文字が続いている場合は拾いません。例えば <code>ββββ</code> は 1234567 の中の 1234 を拾いません。</p>"],
+  ["拾う文字の規則", "入力した形が正しいか確かめたい。", "<p>入力欄の下に、形の説明（英字 3文字、「-」、数字 4文字…）と「例」が出ます。また、列カードの下に実際に拾えた文字が出るので、そこで確認してください。</p>"],
+  ["拾う文字の規則", "「目印の言葉で絞り込む」はどう使いますか？", "<p>範囲の中で、目印の言葉がある行だけを対象にします。「目印から見て右側の文字」を選ぶと、その言葉より右にある文字から拾います。例：目印「お支払期限」＋右側＋日付 → 支払期限の日付だけを拾います。</p>"],
+  ["拾う文字の規則", "正規表現は使えますか？", "<p>「正規表現（上級者向け）」を選ぶと直接入力できます。普段は「その他」で十分です。</p>"],
+
+  ["結果の確認", "「一致なし」と赤く出ます。", "<ul><li>範囲が文字の場所を囲んでいるか確認してください（範囲指定中、範囲に入った文字が色付きで表示されます）。</li><li>規則が実際の文字の形と合っているか確認してください。</li><li>目印の言葉を入れている場合、その言葉が範囲の中にあるか確認してください。</li></ul>"],
+  ["結果の確認", "違う値が取れてしまいます。", "<p>範囲の中に同じ形の文字が複数あると、最初の1つが選ばれます。カードの「候補」に見つかった文字が並ぶので、正しいものを押してください。範囲を狭めるか、目印の言葉で絞り込むのも有効です。</p>"],
+  ["結果の確認", "「いくつか見つかったら」の選択肢の違いは？", "<ul><li>最初の1つ：上の行から、左から順に見て最初のもの</li><li>最後の1つ：合計金額のように、一番下にあるものを取りたいとき</li><li>○番目：決まった順番のもの</li><li>すべて：見つかったものを全部、スペース区切りで1つのセルに入れます</li></ul>"],
+  ["結果の確認", "取れなかった列はどうなりますか？", "<p>空欄になります。違う値を間違えて入れないようにするためです。画面では赤く表示されるので、コピー前に確認できます。</p>"],
+
+  ["列の並び", "「右端の列から」「左端の列から」の違いは？", "<p>列カードを上から設定していくときに、Excelの右端の列から決めるか、左端の列から決めるかの違いです。どちらを選んでも、コピー結果は Excel の A列から順に並びます。各カードの左上に、Excelの何列目になるかが表示されます。</p>"],
+  ["列の並び", "列の順番を入れ替えたい。", "<p>列カードの右上の「↑」「↓」で入れ替えます。「×」で削除します。</p>"],
+  ["列の並び", "空欄の列は何に使いますか？", "<p>Excelの表で、PDFから取らない列（手入力する列など）の位置を空けておくために使います。「＋ 空欄の列を追加」か、カードの「空欄の列に変える」で作れます。</p>"],
+  ["列の並び", "見出しは何に使いますか？", "<p>画面上で列を見分けるための名前です。「見出し行も一緒にコピー」にチェックを入れると、Excelの1行目に見出しも貼り付けられます。</p>"],
+
+  ["コピーとExcel", "Excelにどうやって貼り付けますか？", "<ul><li>「コピー（Excelに貼り付け用）」を押します。</li><li>Excelで貼り付けたいセルを選び、<kbd>Ctrl</kbd>＋<kbd>V</kbd> を押します。</li><li>列ごとに別々のセルに入ります。</li></ul>"],
+  ["コピーとExcel", "貼り付けると1つのセルに全部入ってしまいます。", "<p>Excelの「テキストファイルウィザード」や「区切り位置」の設定が残っていると、そうなることがあります。いったん Excel を閉じて開き直すか、貼り付け先のセルを選んでから「形式を選択して貼り付け」→「テキスト」を試してください。</p>"],
+  ["コピーとExcel", "「文字のまま貼る」は何ですか？", "<p>Excelが勝手に数字や日付に変換しないようにする設定です。0012 の先頭の 0 が消えたり、1-2 が日付になったりするのを防ぎます。金額を計算に使いたいときは、チェックを外して貼り付けてください。</p>"],
+  ["コピーとExcel", "「自動コピーが使えない環境です」と出ました。", "<p>ブラウザの設定でクリップボードの利用が止められています。下に出た枠の文字が選択されているので、そのまま <kbd>Ctrl</kbd>＋<kbd>C</kbd> でコピーし、Excelに貼り付けてください。</p>"],
+  ["コピーとExcel", "Googleスプレッドシートにも貼り付けられますか？", "<p>貼り付けられます。Excelと同じく、列ごとにセルが分かれます。</p>"],
+
+  ["保存と共有", "設定はどこに保存されますか？", "<p>お使いのパソコンの<b>このブラウザの中だけ</b>に保存されます。PDFや拾った文字は保存されず、範囲・規則・列の順番などの設定だけが残ります。</p>"],
+  ["保存と共有", "保存した設定が消えてしまいました。", "<ul><li>別のブラウザや別のパソコンで開いていないか確認してください。</li><li>ブラウザの履歴やサイトデータを消すと、設定も消えます。</li><li>プライベートウィンドウ（シークレットモード）では保存されません。</li></ul><p>大事な設定は、画面下の「設定を別のPCへ移す」から書き出して控えておくと安心です。</p>"],
+  ["保存と共有", "ほかの人に設定を渡したい。", "<ul><li>画面下の「設定を別のPCへ移す」を開きます。</li><li>「保存済みの設定をすべて表示」→「表示した内容をコピー」を押します。</li><li>相手に渡し、相手の画面で同じ枠に貼り付けて「貼り付けた内容を読み込む」を押してもらいます。</li></ul>"],
+  ["保存と共有", "読み込むと、今ある設定はどうなりますか？", "<p>名前が同じ設定は、読み込んだ内容で上書きされます。名前が違う設定はそのまま残ります。</p>"],
+  ["保存と共有", "似た設定を作りたい。", "<p>もとにする設定を開いて「複製」を押すと、「○○ のコピー」という名前で新しく作れます。名前を変えて「保存」してください。</p>"],
+  ["保存と共有", "設定の名前を変えたい。", "<p>「PDFの種類名」を書き換えて「保存」を押すと、新しい名前で保存され、古い名前の設定は消えます。</p>"],
+  ["保存と共有", "削除ボタンを押しても消えません。", "<p>誤操作を防ぐため、2回押すと削除されます。1回目で「もう一度押すと削除」と表示されます。</p>"],
+  ["保存と共有", "「未保存の変更があります」と出ています。", "<p>設定を変えたあと、まだ「保存」を押していない状態です。そのままページを閉じると変更は残りません。</p>"],
+
+  ["安全面", "社外秘のPDFを使っても大丈夫ですか？", "<p>PDFはブラウザの中で読み取るだけで、外部に送信されません。保存もされません。ただし、パソコン自体を他人が使う場合は、画面を閉じてから離席してください。</p>"],
+  ["安全面", "このページのリンクを社外の人に送ってもいいですか？", "<p>社内3名での利用を前提にしています。公開範囲は管理者に確認してください。</p>"]
+];
+const faqDlg = document.getElementById("faqDlg"), faqBody = document.getElementById("faqBody"),
+      faqSearch = document.getElementById("faqSearch"), faqCats = document.getElementById("faqCats");
+const FAQ_CATS = ["すべて", ...new Set(FAQ.map(f => f[0]))];
+let faqCat = "すべて";
+function plain(h){ return h.replace(/<[^>]+>/g, ""); }
+function renderFaq(){
+  faqCats.innerHTML = FAQ_CATS.map(c => `<button data-cat="${esc(c)}" class="${c===faqCat?"on":""}">${esc(c)}</button>`).join("");
+  const q = faqSearch.value.trim().toLowerCase().normalize("NFKC");
+  const hit = FAQ.filter(f => (faqCat === "すべて" || f[0] === faqCat) && (!q || (f[1] + plain(f[2])).toLowerCase().normalize("NFKC").includes(q)));
+  if (!hit.length){ faqBody.innerHTML = `<p class="faqempty">当てはまる質問が見つかりませんでした。別の言葉で探してみてください。</p>`; return; }
+  const groups = {};
+  hit.forEach(f => (groups[f[0]] = groups[f[0]] || []).push(f));
+  faqBody.innerHTML = Object.entries(groups).map(([g, items]) => `<section class="faqgroup"><h3>${esc(g)}</h3>${
+    items.map(f => `<details class="faqitem"${q ? " open" : ""}><summary>${esc(f[1])}</summary><div class="a">${f[2]}</div></details>`).join("")}</section>`).join("");
+}
+document.getElementById("btnFaq").onclick = () => {
+  renderFaq();
+  if (typeof faqDlg.showModal === "function") faqDlg.showModal(); else faqDlg.setAttribute("open", "");
+  faqSearch.focus();
+};
+document.getElementById("faqClose").onclick = () => { if (faqDlg.close) faqDlg.close(); else faqDlg.removeAttribute("open"); };
+faqDlg.addEventListener("click", e => { if (e.target === faqDlg && faqDlg.close) faqDlg.close(); });
+faqSearch.addEventListener("input", renderFaq);
+faqCats.addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (!b) return; faqCat = b.dataset.cat; renderFaq(); });
 
 /* ---------- 起動 ---------- */
 page.items = buildSampleItems();
