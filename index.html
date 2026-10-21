@@ -1,0 +1,1015 @@
+<title>PDF抜き出し 事前設定</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+/* Layout: 帳票の見本（左・拡大縮小できる作業台）に範囲を引き、右の列カードで規則を決める。下に Excel 1行分のプレビュー */
+:root{
+  --bg:#eaeef2; --surface:#ffffff; --surface-2:#f4f6f9; --desk:#d9dfe6; --ink:#18212c; --muted:#5a6676; --line:#d3dae3;
+  --accent:#2c5a87; --accent-weak:#e1eaf4; --accent-ink:#ffffff;
+  --ok:#25704a; --ok-weak:#e1f1e8; --warn:#b3262f; --warn-weak:#fbe6e7; --idle:#6b7686; --idle-weak:#eceff3;
+  --f-ui:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  --f-mono:"IBM Plex Mono","Consolas","Menlo",monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161c; --surface:#19212a; --surface-2:#1f2832; --desk:#0b0f14; --ink:#e3e8ee; --muted:#95a1b1; --line:#2d3743;
+  --accent:#86b4e2; --accent-weak:#1e3044; --accent-ink:#0d1620;
+  --ok:#62c08c; --ok-weak:#17322a; --warn:#f0757c; --warn-weak:#3a1c20; --idle:#8d98a8; --idle-weak:#252e38;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#11161c; --surface:#19212a; --surface-2:#1f2832; --desk:#0b0f14; --ink:#e3e8ee; --muted:#95a1b1; --line:#2d3743;
+  --accent:#86b4e2; --accent-weak:#1e3044; --accent-ink:#0d1620;
+  --ok:#62c08c; --ok-weak:#17322a; --warn:#f0757c; --warn-weak:#3a1c20; --idle:#8d98a8; --idle-weak:#252e38;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.02em;text-wrap:balance}
+h2{font-size:13px;margin:0;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:6px 12px}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+button.ghost{background:transparent}
+button.danger{color:var(--warn)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=number],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;min-width:0;width:100%}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--surface)}
+
+/* top */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;justify-content:space-between}
+.steps{display:flex;gap:4px;flex-wrap:wrap;font-size:12px}
+.steps span{padding:3px 10px;border-radius:999px;background:var(--idle-weak);color:var(--muted)}
+.steps span.on{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.presetbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:end}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field label,.flabel{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.presetbar .grow{flex:1 1 220px}
+.presetbar .acts{display:flex;gap:6px;flex-wrap:wrap}
+.state{font-size:12px;color:var(--muted)}
+.state.dirty{color:var(--warn)} .state.saved{color:var(--ok)}
+
+/* main */
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,470px);gap:16px;align-items:start}
+@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panelhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px)}
+@media (max-width:960px){.sticky{position:static}}
+
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.zoom{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.zoom button{border:0;border-radius:0;padding:5px 11px;font-weight:700}
+.zoom button+button,.zoom output+button{border-left:1px solid var(--line)}
+.zoom output{min-width:56px;text-align:center;font-family:var(--f-mono);font-size:12px;border-left:1px solid var(--line);padding:5px 4px}
+.toolbar .sep{flex:1}
+
+.editbar{background:var(--accent-weak);border-radius:var(--r);padding:8px 10px;font-size:13px;display:flex;gap:6px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.editbar .sw{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:6px;vertical-align:middle}
+.editbar .keys{font-size:11px;color:var(--muted)}
+
+.viewer{position:relative;overflow:auto;background:var(--desk);border-radius:var(--r);height:min(76vh,880px);min-height:360px;padding:16px;overscroll-behavior:contain}
+.pagebox{position:relative;margin:0 auto;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.18),0 8px 24px rgba(10,20,35,.18);border-radius:2px}
+.pagebox canvas{display:block;width:100%;height:100%}
+.overlay{position:absolute;inset:0;user-select:none;-webkit-user-select:none}
+.overlay.drawing{cursor:crosshair;touch-action:none}
+.pagebox.dragover{outline:3px dashed var(--accent);outline-offset:4px}
+.rbox{position:absolute;border:2px solid var(--c);background:color-mix(in srgb,var(--c) 9%,transparent);border-radius:2px;cursor:pointer;touch-action:none}
+.rbox:hover{background:color-mix(in srgb,var(--c) 15%,transparent)}
+.rbox.dim{opacity:.55}
+.rbox.active{border-width:2px;outline:1px dashed var(--c);outline-offset:3px;cursor:move;background:color-mix(in srgb,var(--c) 13%,transparent);opacity:1}
+.rbox .tag{position:absolute;left:-2px;bottom:100%;background:var(--c);color:#fff;font-size:10px;line-height:1;padding:3px 5px;border-radius:2px 2px 0 0;white-space:nowrap;font-weight:700;margin-bottom:0}
+.rbox.active .tag{margin-bottom:4px;border-radius:2px}
+.hd{position:absolute;width:11px;height:11px;background:#ffffff;border:2px solid var(--c);border-radius:2px}
+.hd[data-h=nw]{left:-7px;top:-7px;cursor:nwse-resize}.hd[data-h=n]{left:calc(50% - 5px);top:-7px;cursor:ns-resize}
+.hd[data-h=ne]{right:-7px;top:-7px;cursor:nesw-resize}.hd[data-h=e]{right:-7px;top:calc(50% - 5px);cursor:ew-resize}
+.hd[data-h=se]{right:-7px;bottom:-7px;cursor:nwse-resize}.hd[data-h=s]{left:calc(50% - 5px);bottom:-7px;cursor:ns-resize}
+.hd[data-h=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}.hd[data-h=w]{left:-7px;top:calc(50% - 5px);cursor:ew-resize}
+.srcnote{font-size:12px;color:var(--muted);margin:0}
+
+/* slots */
+.slotlist{display:flex;flex-direction:column;gap:10px}
+.slot{border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:9px;background:var(--surface);cursor:default}
+.slot.active{box-shadow:0 0 0 2px var(--c);background:color-mix(in srgb,var(--c) 4%,var(--surface))}
+.slot.blank{border-left-style:dashed;background:var(--surface-2)}
+.slothead{display:flex;gap:8px;align-items:center}
+.colno{display:flex;flex-direction:column;line-height:1.15;white-space:nowrap;min-width:52px}
+.colno b{font-size:15px;color:var(--c);font-family:var(--f-mono)}
+.colno span{font-size:10px;color:var(--muted)}
+.slothead input{flex:1 1 auto}
+.tools{display:flex;gap:3px}
+.tools button{padding:3px 8px;font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:460px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.span2{grid-column:1/-1}
+.regionrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.coords{font-size:11px;color:var(--muted)}
+.tplbox{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.tplbox input{font-size:16px;letter-spacing:.08em}
+.tplkeys{display:flex;gap:4px;flex-wrap:wrap}
+.tplkeys button{padding:3px 9px;font-size:12px}
+.tplkeys button b{font-family:var(--f-mono);font-size:14px;margin-right:3px}
+.tplhelp{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-size:12px}
+.tok{padding:1px 7px;border-radius:4px;background:var(--surface);border:1px solid var(--line);white-space:nowrap}
+.tok.a{border-color:#5b8fd0}.tok.d{border-color:#3f9e6b}.tok.s{border-color:#c48a2a}.tok.l{border-style:dashed}
+.tplhelp .ex{color:var(--muted);margin-left:4px}
+.tplhelp .err{color:var(--warn)}
+.result{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:8px;min-width:0}
+.result .main{display:flex;gap:8px;align-items:baseline;min-width:0}
+.result .val{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere;min-width:0}
+.cands{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)}
+.cands button{font-family:var(--f-mono);font-size:11px;padding:1px 7px;border-radius:999px}
+.cands button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pill{font-size:11px;padding:1px 8px;border-radius:999px;white-space:nowrap;font-weight:700}
+.pill.ok{background:var(--ok-weak);color:var(--ok)}
+.pill.nomatch{background:var(--warn-weak);color:var(--warn)}
+.pill.unset,.pill.blank{background:var(--idle-weak);color:var(--idle)}
+.slotfoot{display:flex;justify-content:flex-end}
+.slotfoot button{font-size:12px;padding:3px 8px}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+.addrow button{flex:1 1 140px}
+details.adv summary{cursor:pointer;font-size:12px;color:var(--muted)}
+details.adv[open] summary{margin-bottom:6px}
+
+/* output */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table.xl{border-collapse:collapse;font-size:13px;min-width:100%}
+table.xl th,table.xl td{border:1px solid var(--line);padding:5px 10px;text-align:left;white-space:nowrap}
+table.xl thead th{background:var(--surface-2);color:var(--muted);font-weight:500;font-size:11px;text-align:center;font-family:var(--f-mono)}
+table.xl th.rh{background:var(--surface-2);color:var(--muted);font-weight:500;font-size:11px;width:28px;text-align:center}
+table.xl [data-id]{cursor:pointer}
+table.xl .colact{box-shadow:inset 0 -3px 0 var(--accent)}
+table.xl td.lbl{color:var(--muted);font-size:12px}
+table.xl td.v{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.xl td.v.nomatch,table.xl td.v.unset{background:var(--warn-weak)}
+table.xl td.v.blank{background:repeating-linear-gradient(45deg,transparent 0 6px,var(--idle-weak) 6px 12px)}
+.outacts{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap}
+.check{display:flex;gap:6px;align-items:center;font-size:13px}
+textarea{min-height:110px;font-family:var(--f-mono);font-size:12px}
+.toast{font-size:13px;color:var(--ok);font-weight:700}
+.toast.err{color:var(--warn)}
+@media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background-color .15s}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>PDF抜き出し　事前設定</h1>
+    <div class="steps" aria-label="作業の流れ">
+      <span class="on">事前設定</span><span>PDFを読み込む</span><span>Excelへコピー</span>
+    </div>
+  </div>
+
+  <section class="presetbar" aria-label="PDFの種類">
+    <div class="field">
+      <label for="presetSel">保存済みの設定</label>
+      <select id="presetSel"></select>
+    </div>
+    <div class="field grow">
+      <label for="presetName">PDFの種類名</label>
+      <input type="text" id="presetName" placeholder="例：青葉精機 請求書">
+    </div>
+    <div class="field">
+      <label for="dirSel">列の設定順</label>
+      <select id="dirSel">
+        <option value="rtl">右端の列から</option>
+        <option value="ltr">左端の列から</option>
+      </select>
+    </div>
+    <div class="acts">
+      <button class="primary" id="btnSave">保存</button>
+      <button id="btnNew">新規作成</button>
+      <button id="btnDup">複製</button>
+      <button class="danger ghost" id="btnDel">削除</button>
+    </div>
+    <span id="saveState" class="state" aria-live="polite"></span>
+  </section>
+
+  <div class="main">
+    <section class="panel sticky" aria-label="見本PDF">
+      <div class="toolbar">
+        <h2>見本PDF</h2>
+        <div class="zoom" role="group" aria-label="拡大縮小">
+          <button id="zOut" title="縮小（Ctrl＋ホイールでも可）" aria-label="縮小">−</button>
+          <output id="zLabel">100%</output>
+          <button id="zIn" title="拡大（Ctrl＋ホイールでも可）" aria-label="拡大">＋</button>
+        </div>
+        <button id="zWidth">幅に合わせる</button>
+        <button id="zPage">全体を表示</button>
+        <span class="sep"></span>
+        <input type="file" id="pdfFile" accept="application/pdf" hidden>
+        <button id="btnPick">見本PDFを選ぶ</button>
+        <button class="ghost" id="btnSample">架空サンプル</button>
+      </div>
+      <div id="editbar" class="editbar" hidden></div>
+      <div class="viewer" id="viewer">
+        <div class="pagebox" id="pagebox">
+          <canvas id="cv"></canvas>
+          <div class="overlay" id="overlay"></div>
+        </div>
+      </div>
+      <p class="srcnote" id="srcNote"></p>
+    </section>
+
+    <section class="panel" aria-label="アウトプットの列設定">
+      <div class="panelhead">
+        <h2>アウトプットの列</h2>
+        <span class="hint" id="slotCount"></span>
+      </div>
+      <p class="hint">列のカードをダブルクリックすると範囲の指定に入ります。ページ上をドラッグして囲み、枠は動かしたり角を引っぱって大きさを変えたりできます。</p>
+      <div class="slotlist" id="slotlist"></div>
+      <div class="addrow">
+        <button id="btnAddExtract">＋ 抜き出す列を追加</button>
+        <button id="btnAddBlank">＋ 空欄の列を追加</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Excelに貼り付けたときの形">
+    <div class="panelhead">
+      <h2>Excelに貼り付けたときの形</h2>
+      <span class="hint">左から A列, B列 … の順にセルへ入ります。列をダブルクリックすると、その列の範囲指定に入ります。</span>
+    </div>
+    <div class="tablewrap"><table class="xl" id="xl"></table></div>
+    <div class="outacts">
+      <button class="primary" id="btnCopy">コピー（Excelに貼り付け用）</button>
+      <label class="check"><input type="checkbox" id="withHeader"> 見出し行も一緒にコピー</label>
+      <label class="check"><input type="checkbox" id="asText" checked> 文字のまま貼る（先頭の0や日付の自動変換を防ぐ）</label>
+      <span id="copyMsg" class="toast" aria-live="polite"></span>
+    </div>
+    <textarea id="copyFallback" hidden aria-label="コピー用テキスト"></textarea>
+  </section>
+
+  <section class="panel" aria-label="設定の書き出しと読み込み">
+    <details class="adv">
+      <summary>設定を別のPCへ移す（書き出し・読み込み）</summary>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <p class="hint">設定はこのブラウザだけに保存されます。別のPCで使うときは、下の文字列をコピーして、相手側の「貼り付けた内容を読み込む」で取り込んでください。</p>
+        <div class="outacts">
+          <button id="btnExport">保存済みの設定をすべて表示</button>
+          <button id="btnCopyJson">表示した内容をコピー</button>
+          <input type="file" id="jsonFile" accept=".json,application/json" hidden>
+          <button id="btnJsonFile">JSONファイルから読み込む</button>
+          <button id="btnImport">貼り付けた内容を読み込む</button>
+          <span id="ioMsg" class="toast" aria-live="polite"></span>
+        </div>
+        <label for="jsonBox" class="hint">設定データ（JSON）</label>
+        <textarea id="jsonBox" placeholder="ここに書き出し結果が出ます。読み込むときは、ここに貼り付けてください。"></textarea>
+      </div>
+    </details>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- 定数 ---------- */
+const STORE_KEY = "pdfpick.presets.v1";
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+const PAGE_W = 595, PAGE_H = 842;
+const COLORS = ["#2c6fb7","#c2410c","#15803d","#9333ea","#be185d","#0e7490","#a16207","#4d7c0f","#b91c1c","#4338ca"];
+const ZOOMS = [0.5,0.67,0.75,0.9,1,1.25,1.5,1.75,2,2.5,3,4];
+const MIN = 0.004;
+const PATTERNS = {
+  other:  {label:"その他（文字の形を α・β・γ で指定）", mode:"tpl"},
+  date:   {label:"日付", re:"\\d{4}\\s*[/\\-.年]\\s*\\d{1,2}\\s*[/\\-.月]\\s*\\d{1,2}\\s*日?"},
+  money:  {label:"金額（¥やカンマ付き）", re:"[¥￥]\\s*-?\\d[\\d,]*(?:\\.\\d+)?円?|-?\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?円?|-?\\d+円"},
+  number: {label:"数字", re:"-?\\d+(?:[,.]\\d+)*"},
+  zip:    {label:"郵便番号", re:"〒?\\s*\\d{3}-\\d{4}"},
+  tel:    {label:"電話番号", re:"0\\d{1,4}-\\d{1,4}-\\d{3,4}"},
+  line:   {label:"範囲内の1行ずつ", mode:"line"},
+  all:    {label:"範囲内の文字すべて", mode:"all"},
+  custom: {label:"正規表現（上級者向け）", mode:"custom"}
+};
+const PICKS = {first:"最初の1つ", last:"最後の1つ", nth:"○番目", all:"すべて（スペース区切り）"};
+
+/* ---------- 架空のサンプル帳票 ---------- */
+const SAMPLE = [
+  {s:"請　求　書",x:250,y:56,z:24,b:1},
+  {s:"請求番号",x:380,y:110,z:10},{s:"INV-2026-0142",x:450,y:110,z:10},
+  {s:"発行日",x:380,y:128,z:10},{s:"2026年10月15日",x:450,y:128,z:10},
+  {s:"株式会社 青葉精機 御中",x:50,y:150,z:14,b:1},
+  {s:"〒170-0013 東京都豊島区東池袋3-1-1",x:50,y:174,z:9},
+  {s:"株式会社サンプル商事",x:380,y:160,z:11,b:1},
+  {s:"〒100-0005 東京都千代田区丸の内1-2-3",x:380,y:178,z:8},
+  {s:"TEL 03-1234-5678",x:380,y:191,z:8},
+  {s:"登録番号 T1234567890123",x:380,y:204,z:8},
+  {s:"ご請求金額",x:50,y:226,z:12},{s:"¥1,234,750",x:150,y:222,z:18,b:1},{s:"（税込）",x:262,y:228,z:10},
+  {s:"品名",x:50,y:280,z:9,b:1},{s:"品番",x:220,y:280,z:9,b:1},{s:"数量",x:320,y:280,z:9,b:1},{s:"単価",x:390,y:280,z:9,b:1},{s:"金額",x:480,y:280,z:9,b:1},
+  {s:"精密加工部品",x:50,y:302,z:10},{s:"AB-1203",x:220,y:302,z:10},{s:"10",x:325,y:302,z:10},{s:"¥45,000",x:390,y:302,z:10},{s:"¥450,000",x:480,y:302,z:10},
+  {s:"ステンレスシャフト",x:50,y:322,z:10},{s:"SF-3007",x:220,y:322,z:10},{s:"25",x:325,y:322,z:10},{s:"¥18,500",x:390,y:322,z:10},{s:"¥462,500",x:480,y:322,z:10},
+  {s:"組立・調整作業",x:50,y:342,z:10},{s:"WK-0001",x:220,y:342,z:10},{s:"1",x:328,y:342,z:10},{s:"¥210,000",x:390,y:342,z:10},{s:"¥210,000",x:480,y:342,z:10},
+  {s:"小計",x:390,y:380,z:10},{s:"¥1,122,500",x:480,y:380,z:10},
+  {s:"消費税（10%）",x:390,y:398,z:10},{s:"¥112,250",x:480,y:398,z:10},
+  {s:"合計",x:390,y:418,z:11,b:1},{s:"¥1,234,750",x:480,y:418,z:11,b:1},
+  {s:"お支払期限",x:50,y:470,z:10},{s:"2026年11月30日",x:140,y:470,z:10},
+  {s:"お振込先",x:50,y:490,z:10},{s:"みずほ銀行 丸の内支店 普通 1234567",x:140,y:490,z:10},
+  {s:"※ 動作確認用の架空の請求書です",x:50,y:784,z:8}
+];
+const SAMPLE_LINES = [[50,212,545,212],[50,294,545,294],[50,358,545,358],[380,410,545,410]];
+const FONT_STACK = '"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif';
+
+function samplePreset(){
+  return {
+    name:"請求書（サンプル）", direction:"rtl",
+    slots:[
+      mk({label:"支払期限",region:{x:.07,y:.548,w:.42,h:.028},pattern:"date",keyword:"お支払期限",side:"right"}),
+      mk({label:"合計金額",region:{x:.62,y:.440,w:.35,h:.072},pattern:"money",pick:"last"}),
+      mk({label:"品番",region:{x:.36,y:.352,w:.16,h:.068},pattern:"other",tpl:"αα-ββββ",pick:"all"}),
+      mk({label:"（空欄）",type:"blank"}),
+      mk({label:"取引先",region:{x:.07,y:.172,w:.46,h:.03},pattern:"custom",custom:".+?(?=\\s*御中)"}),
+      mk({label:"発行日",region:{x:.74,y:.145,w:.23,h:.026},pattern:"date"}),
+      mk({label:"請求番号",region:{x:.74,y:.123,w:.23,h:.024},pattern:"other",tpl:"ααα-ββββ-ββββ"})
+    ]
+  };
+}
+let uid = 1;
+function mk(o){
+  return Object.assign({id:"s"+(uid++),label:"",type:"extract",region:null,pattern:"line",tpl:"",custom:"",keyword:"",side:"right",pick:"first",nth:2}, o||{});
+}
+
+/* ---------- 状態 ---------- */
+let store = loadStore();
+let cur = null, activeId = null;
+let page = {items:[], aspect:PAGE_H/PAGE_W, source:"sample", pdfPage:null, bg:null, bgW:0};
+let zoom = 1;
+
+function loadStore(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch(e){ s = null; }
+  if (!s || typeof s.presets !== "object" || !s.presets) s = {presets:{}, last:null};
+  return s;
+}
+function saveStore(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); return true; } catch(e){ return false; } }
+function hydrate(p){
+  const c = JSON.parse(JSON.stringify(p));
+  c.direction = c.direction === "ltr" ? "ltr" : "rtl";
+  c.slots = (c.slots||[]).map(s => { const o = Object.assign({}, s); delete o.id; if (!PATTERNS[o.pattern]) delete o.pattern; return mk(o); });
+  return c;
+}
+function strip(p){
+  return {name:p.name, direction:p.direction, slots:p.slots.map(s => {
+    const o = {label:s.label, type:s.type};
+    if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth});
+    return o; })};
+}
+const slotById = id => cur.slots.find(s => s.id === id);
+
+/* ---------- 見本ページ ---------- */
+const viewer = document.getElementById("viewer");
+const pagebox = document.getElementById("pagebox");
+const cv = document.getElementById("cv");
+const overlay = document.getElementById("overlay");
+const measureCtx = document.createElement("canvas").getContext("2d");
+
+function buildSampleItems(){
+  return SAMPLE.map(t => {
+    measureCtx.font = `${t.b?700:400} ${t.z}px ${FONT_STACK}`;
+    const w = measureCtx.measureText(t.s).width;
+    return {str:t.s, x:t.x/PAGE_W, y:t.y/PAGE_H, w:w/PAGE_W, h:t.z/PAGE_H, z:t.z, b:t.b};
+  });
+}
+function setNote(t){ document.getElementById("srcNote").textContent = t; }
+function useSample(){
+  page = {items:buildSampleItems(), aspect:PAGE_H/PAGE_W, source:"sample", pdfPage:null, bg:null, bgW:0};
+  setNote("架空のサンプル請求書を表示しています。手元のPDFをこの枠にドロップすると、1ページ目に差し替わります。PDFも文字も保存しません。");
+  zoom = 1; layoutPage(false); viewer.scrollTo(0,0); refreshSide();
+}
+async function loadPdf(file){
+  if (!window.pdfjsLib){ setNote("PDFを読む部品を読み込めませんでした。ネットワーク接続を確認して、ページを開き直してください。"); return; }
+  setNote("読み込み中…");
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js";
+    const doc = await pdfjsLib.getDocument({data:await file.arrayBuffer(), cMapUrl:PDFJS+"cmaps/", cMapPacked:true}).promise;
+    const pg = await doc.getPage(1);
+    const vp = pg.getViewport({scale:1});
+    const tc = await pg.getTextContent();
+    const items = [];
+    for (const it of tc.items){
+      if (!it.str || !it.str.trim()) continue;
+      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
+      const fh = Math.hypot(tx[2], tx[3]) || 10;
+      items.push({str:it.str, x:tx[4]/vp.width, y:(tx[5]-fh)/vp.height, w:it.width/vp.width, h:fh/vp.height});
+    }
+    page = {items, aspect:vp.height/vp.width, source:"pdf", pdfPage:pg, bg:null, bgW:0};
+    let n = `見本PDF：${file.name}（1ページ目・文字のかたまり ${items.length} 個）。このPDFは保存されません。`;
+    if (doc.numPages > 1) n += ` 2ページ目以降は使いません（全 ${doc.numPages} ページ）。`;
+    if (!items.length) n += " 文字が見つかりませんでした。画像だけのPDFの可能性があります。";
+    setNote(n);
+    zoom = 1; layoutPage(false); viewer.scrollTo(0,0); refreshSide();
+  }catch(e){
+    setNote("PDFを開けませんでした。パスワード付き、または壊れている可能性があります。");
+  }
+}
+let bgTimer = null, bgJob = 0;
+function schedulePdfRender(){
+  if (page.source !== "pdf" || !page.pdfPage) return;
+  clearTimeout(bgTimer);
+  bgTimer = setTimeout(async () => {
+    const want = Math.min(4096, cv.width);
+    if (page.bg && page.bgW >= want * 0.92) return;
+    const job = ++bgJob, pg = page.pdfPage;
+    const base = pg.getViewport({scale:1});
+    const vp = pg.getViewport({scale: want / base.width});
+    const off = document.createElement("canvas");
+    off.width = Math.round(vp.width); off.height = Math.round(vp.height);
+    await pg.render({canvasContext:off.getContext("2d"), viewport:vp}).promise;
+    if (job !== bgJob || page.pdfPage !== pg) return;
+    page.bg = off; page.bgW = off.width; drawPage();
+  }, 140);
+}
+
+/* ---------- 拡大縮小 ---------- */
+const zLabel = document.getElementById("zLabel");
+function baseWidth(){ return Math.max(220, viewer.clientWidth - 32); }
+function layoutPage(keepCenter){
+  let cx = .5, cy = .5;
+  if (keepCenter && pagebox.offsetWidth){
+    cx = (viewer.scrollLeft + viewer.clientWidth/2 - pagebox.offsetLeft) / pagebox.offsetWidth;
+    cy = (viewer.scrollTop + viewer.clientHeight/2 - pagebox.offsetTop) / pagebox.offsetHeight;
+  }
+  const W = Math.round(baseWidth() * zoom), H = Math.round(W * page.aspect);
+  pagebox.style.width = W + "px"; pagebox.style.height = H + "px";
+  drawPage(); drawBoxes();
+  if (keepCenter){
+    viewer.scrollLeft = pagebox.offsetLeft + cx * W - viewer.clientWidth/2;
+    viewer.scrollTop = pagebox.offsetTop + cy * H - viewer.clientHeight/2;
+  }
+  zLabel.textContent = Math.round(zoom*100) + "%";
+  document.getElementById("zOut").disabled = zoom <= ZOOMS[0] + 1e-6;
+  document.getElementById("zIn").disabled = zoom >= ZOOMS[ZOOMS.length-1] - 1e-6;
+  schedulePdfRender();
+}
+function stepZoom(dir){
+  const next = dir > 0 ? ZOOMS.find(z => z > zoom + 1e-6) : [...ZOOMS].reverse().find(z => z < zoom - 1e-6);
+  if (next){ zoom = next; layoutPage(true); }
+}
+document.getElementById("zIn").onclick = () => stepZoom(1);
+document.getElementById("zOut").onclick = () => stepZoom(-1);
+document.getElementById("zWidth").onclick = () => { zoom = 1; layoutPage(true); };
+document.getElementById("zPage").onclick = () => {
+  zoom = Math.max(0.3, Math.min(1, (viewer.clientHeight - 32) / (baseWidth() * page.aspect)));
+  layoutPage(false); viewer.scrollTo(0,0);
+};
+viewer.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1); }, {passive:false});
+
+/* ---------- 文字の形（α・β・γ） ---------- */
+const CLS = {a:"[A-Za-z]", d:"[0-9]", s:"[\\p{P}\\p{S}]"};
+const CLSNAME = {a:"英字", d:"数字", s:"記号"};
+function escRe(c){ return c.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
+function compileTemplate(t){
+  const toks = [];
+  for (const ch of [...(t||"")]){
+    if (ch === "α" || ch === "Α") toks.push({k:"a"});
+    else if (ch === "β" || ch === "Β") toks.push({k:"d"});
+    else if (ch === "γ" || ch === "Γ") toks.push({k:"s"});
+    else if (ch === "…" || ch === "‥"){ const p = toks[toks.length-1]; if (p && p.k !== "sp") p.many = true; }
+    else if (/\s/.test(ch)){ if (!toks.length || toks[toks.length-1].k !== "sp") toks.push({k:"sp"}); }
+    else toks.push({k:"l", c:ch.normalize("NFKC")});
+  }
+  while (toks.length && toks[0].k === "sp") toks.shift();
+  while (toks.length && toks[toks.length-1].k === "sp") toks.pop();
+  if (!toks.length) return {err:"文字の形が空です。下のボタンで α・β・γ を入れてください"};
+  let src = toks.map(k => k.k === "sp" ? "\\s*" : (k.k === "l" ? escRe(k.c) : CLS[k.k]) + (k.many ? "+" : "")).join("");
+  const f = toks[0], l = toks[toks.length-1];
+  if (f.k === "a" || f.k === "d") src = `(?<!${CLS[f.k]})` + src;
+  if (l.k === "a" || l.k === "d") src = src + `(?!${CLS[l.k]})`;
+  // 説明用のまとまり
+  const groups = [];
+  for (const k of toks){
+    const g = groups[groups.length-1];
+    if (g && k.k !== "l" && k.k !== "sp" && g.k === k.k && !g.many && !k.many){ g.n++; continue; }
+    if (g && k.k === "l" && g.k === "l"){ g.c += k.c; continue; }
+    groups.push(Object.assign({n:1}, k, {c:k.c||""}));
+  }
+  const sample = {a:"ABCDEFGHIJ", d:"1234567890", s:"#"};
+  const cnt = {a:0, d:0, s:0};
+  const one = k => { const v = sample[k][cnt[k] % sample[k].length]; cnt[k]++; return v; };
+  const ex = toks.map(k => k.k === "sp" ? " " : k.k === "l" ? k.c : (k.many ? (k.k === "s" ? one("s") : one(k.k) + one(k.k) + one(k.k)) : one(k.k))).join("");
+  try { return {re:new RegExp(src, "gu"), groups, ex}; } catch(e){ return {err:"文字の形を読み取れませんでした"}; }
+}
+function tplHelpHtml(t){
+  const c = compileTemplate(t);
+  if (c.err) return `<span class="err">${esc(c.err)}</span>`;
+  const g = c.groups.map(g => g.k === "sp" ? `<span class="tok">空白</span>`
+    : g.k === "l" ? `<span class="tok l">「${esc(g.c)}」</span>`
+    : `<span class="tok ${g.k}">${CLSNAME[g.k]}${g.many ? " 1文字以上" : " " + g.n + "文字"}</span>`).join("");
+  return g + `<span class="ex">例：<span class="mono">${esc(c.ex)}</span></span>`;
+}
+
+/* ---------- 抽出 ---------- */
+function inRegion(it, r){ const cx = it.x + it.w/2, cy = it.y + it.h/2; return cx >= r.x && cx <= r.x+r.w && cy >= r.y && cy <= r.y+r.h; }
+function linesIn(region){
+  const its = page.items.filter(it => inRegion(it, region)).sort((a,b) => (a.y+a.h/2) - (b.y+b.h/2));
+  const lines = [];
+  for (const it of its){
+    const cy = it.y + it.h/2;
+    const L = lines.find(l => Math.abs(l.cy - cy) < Math.max(l.h, it.h) * 0.45);
+    if (L) L.items.push(it); else lines.push({cy, h:it.h, items:[it]});
+  }
+  return lines.map(l => {
+    l.items.sort((a,b) => a.x - b.x);
+    let s = "", prev = null;
+    for (const it of l.items){
+      if (prev && it.x - (prev.x + prev.w) > prev.h * page.aspect * 0.25) s += " ";
+      s += it.str; prev = it;
+    }
+    return s.normalize("NFKC").replace(/\s+/g, " ").trim();
+  }).filter(Boolean);
+}
+function matcherFor(slot){
+  const p = PATTERNS[slot.pattern] || PATTERNS.line;
+  if (p.mode === "tpl") return compileTemplate(slot.tpl);
+  if (p.mode === "custom"){
+    if (!slot.custom) return {err:"正規表現が空です"};
+    try { return {re:new RegExp(slot.custom, "gu")}; } catch(e){ return {err:"正規表現の書き方に誤りがあります"}; }
+  }
+  if (p.re) return {re:new RegExp(p.re, "gu")};
+  return {mode:p.mode};
+}
+function extract(slot){
+  if (slot.type === "blank") return {status:"blank", value:"", found:[]};
+  if (!slot.region) return {status:"unset", value:"", found:[]};
+  let texts = linesIn(slot.region);
+  const kw = (slot.keyword||"").normalize("NFKC").trim();
+  if (kw){
+    texts = texts.filter(t => t.includes(kw)).map(t => {
+      const i = t.indexOf(kw);
+      return (slot.side === "left" ? t.slice(0, i) : t.slice(i + kw.length)).trim();
+    }).filter(Boolean);
+  }
+  const m = matcherFor(slot);
+  if (m.err) return {status:"nomatch", value:"", note:m.err, found:[]};
+  let found = [];
+  if (m.mode === "line") found = texts;
+  else if (m.mode === "all") found = texts.length ? [texts.join(" ")] : [];
+  else for (const t of texts) for (const x of t.matchAll(m.re)) if (x[0].trim()) found.push(x[0].trim());
+  if (!found.length) return {status:"nomatch", value:"", note: kw ? `範囲内に「${kw}」のある行で、一致する文字がありません` : "範囲内に一致する文字がありません", found};
+  let v;
+  if (slot.pick === "last") v = found[found.length-1];
+  else if (slot.pick === "all") v = found.join(" ");
+  else if (slot.pick === "nth"){ v = found[(slot.nth|0)-1]; if (v === undefined) return {status:"nomatch", value:"", note:`一致は ${found.length} 個しかありません`, found}; }
+  else v = found[0];
+  return {status:"ok", value:v, found};
+}
+
+/* ---------- 列の順番・色 ---------- */
+function colLetter(i){ let s = ""; i++; while (i > 0){ const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; }
+function outputOrder(){ return cur.direction === "rtl" ? cur.slots.slice().reverse() : cur.slots.slice(); }
+function colIndexOf(i){ return cur.direction === "rtl" ? cur.slots.length - 1 - i : i; }
+function colorOf(slot){ return COLORS[cur.slots.indexOf(slot) % COLORS.length]; }
+
+/* ---------- 描画：ページ ---------- */
+function drawPage(){
+  const W = pagebox.clientWidth || 600, H = pagebox.clientHeight || W * page.aspect;
+  const k = Math.min(window.devicePixelRatio || 1, Math.sqrt(16e6 / (W*H)));
+  cv.width = Math.round(W*k); cv.height = Math.round(H*k);
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(k,0,0,k,0,0);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,W,H);
+  if (page.source === "pdf"){
+    if (page.bg) ctx.drawImage(page.bg, 0, 0, W, H);
+  } else {
+    const s = W / PAGE_W;
+    ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = Math.max(.6, .8*s);
+    for (const [x1,y1,x2,y2] of SAMPLE_LINES){ ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.stroke(); }
+    ctx.fillStyle = "#1d1d1f"; ctx.textBaseline = "top";
+    for (const it of page.items){ ctx.font = `${it.b?700:400} ${it.z*s}px ${FONT_STACK}`; ctx.fillText(it.str, it.x*W, it.y*H); }
+  }
+  const act = activeId && slotById(activeId);
+  if (act && act.region){
+    ctx.fillStyle = colorOf(act) + "38";
+    for (const it of page.items) if (inRegion(it, act.region)) ctx.fillRect(it.x*W-1, it.y*H-1, it.w*W+2, it.h*H+2);
+  }
+}
+const HANDLES = ["nw","n","ne","e","se","s","sw","w"];
+function drawBoxes(){
+  overlay.innerHTML = "";
+  cur.slots.forEach((s, i) => {
+    if (s.type !== "extract" || !s.region) return;
+    const d = document.createElement("div");
+    const on = s.id === activeId;
+    d.className = "rbox" + (on ? " active" : (activeId ? " dim" : ""));
+    d.dataset.id = s.id;
+    d.style.setProperty("--c", colorOf(s));
+    Object.assign(d.style, {left:s.region.x*100+"%", top:s.region.y*100+"%", width:s.region.w*100+"%", height:s.region.h*100+"%"});
+    const t = document.createElement("span"); t.className = "tag";
+    t.textContent = `${colLetter(colIndexOf(i))}　${s.label || "（名前なし）"}`;
+    d.appendChild(t);
+    if (on) for (const h of HANDLES){ const e = document.createElement("i"); e.className = "hd"; e.dataset.h = h; d.appendChild(e); }
+    d.title = on ? "ドラッグで移動、四隅と辺でサイズ変更" : "クリックでこの列を選ぶ";
+    overlay.appendChild(d);
+  });
+  overlay.classList.toggle("drawing", !!activeId);
+  const bar = document.getElementById("editbar");
+  const act = activeId && slotById(activeId);
+  if (act){
+    bar.hidden = false; bar.style.setProperty("--c", colorOf(act));
+    const i = cur.slots.indexOf(act);
+    bar.innerHTML = `<span><span class="sw"></span><b>${colLetter(colIndexOf(i))}列「${esc(act.label || "名前なし")}」</b>の範囲を指定中。${act.region ? "枠をドラッグで移動、角や辺でサイズ変更。外側をドラッグすると引き直せます。" : "ページ上をドラッグして囲んでください。"}<br><span class="keys"><kbd>←↑→↓</kbd> 少しずつ移動　<kbd>Shift</kbd>＋矢印 サイズ変更　<kbd>Esc</kbd> 終了</span></span>`;
+    const b = document.createElement("button"); b.className = "primary"; b.textContent = "指定を終える";
+    b.onclick = () => setActive(null);
+    bar.appendChild(b);
+  } else bar.hidden = true;
+}
+
+/* ---------- 描画：列カード ---------- */
+const slotlist = document.getElementById("slotlist");
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function opts(map, sel){ return Object.entries(map).map(([k,v]) => `<option value="${k}"${k===sel?" selected":""}>${esc(typeof v === "string" ? v : v.label)}</option>`).join(""); }
+function coordsText(r){ return r ? `左 ${(r.x*100).toFixed(1)}%・上 ${(r.y*100).toFixed(1)}%・幅 ${(r.w*100).toFixed(1)}%・高さ ${(r.h*100).toFixed(1)}%` : "まだ範囲がありません"; }
+
+function renderSlots(){
+  const n = cur.slots.length;
+  document.getElementById("slotCount").textContent = `${n} 列`;
+  slotlist.innerHTML = cur.slots.map((s, i) => {
+    const ord = cur.direction === "rtl" ? `右から${i+1}` : `左から${i+1}`;
+    const c = colorOf(s), id = s.id;
+    const head = `
+      <div class="slothead">
+        <div class="colno"><b>${colLetter(colIndexOf(i))}</b><span>${ord}列目</span></div>
+        <input type="text" id="${id}-label" data-k="label" value="${esc(s.label)}" placeholder="見出し（例：請求番号）" aria-label="見出し">
+        <div class="tools">
+          <button data-act="up" title="ひとつ前へ" aria-label="ひとつ前へ"${i===0?" disabled":""}>↑</button>
+          <button data-act="down" title="ひとつ後へ" aria-label="ひとつ後へ"${i===n-1?" disabled":""}>↓</button>
+          <button data-act="del" class="danger" title="この列を削除" aria-label="この列を削除">×</button>
+        </div>
+      </div>`;
+    if (s.type === "blank"){
+      return `<div class="slot blank" data-id="${id}" style="--c:${c}">${head}
+        <div class="regionrow"><span class="hint">空欄の列です。Excelでは何も入らないセルになります。</span>
+        <button data-act="toExtract" class="ghost">抜き出す列に変える</button></div></div>`;
+    }
+    const isTpl = s.pattern === "other", isCustom = s.pattern === "custom";
+    return `<div class="slot${id===activeId?" active":""}" data-id="${id}" style="--c:${c}">${head}
+      <div class="regionrow">
+        <button data-act="draw" class="${id===activeId?"primary":""}">${id===activeId ? "範囲を指定中…" : (s.region ? "範囲を直す" : "範囲を指定する")}</button>
+        <span class="coords mono" data-coords>${coordsText(s.region)}</span>
+      </div>
+      <div class="field"><label for="${id}-pattern">拾う文字の規則</label>
+        <select id="${id}-pattern" data-k="pattern">${opts(PATTERNS, s.pattern)}</select></div>
+      <div class="tplbox"${isTpl?"":" hidden"}>
+        <label class="flabel" for="${id}-tpl">ターゲットの文字の形　α＝英字　β＝数字　γ＝記号　…＝直前の種類が何文字でも</label>
+        <input type="text" class="mono" id="${id}-tpl" data-k="tpl" value="${esc(s.tpl)}" placeholder="例：ααα-ββββ" autocomplete="off" spellcheck="false">
+        <div class="tplkeys">
+          <button data-ins="α" title="英字1文字"><b>α</b>英字</button>
+          <button data-ins="β" title="数字1文字"><b>β</b>数字</button>
+          <button data-ins="γ" title="記号1文字"><b>γ</b>記号</button>
+          <button data-ins="…" title="直前の英字・数字・記号が1文字以上いくつでも"><b>…</b>何文字でも</button>
+          <button data-ins=" " title="空白（あってもなくても可）">空白</button>
+          <button data-ins="BS" title="カーソルの前の1文字を消す">1字消す</button>
+        </div>
+        <div class="tplhelp" data-tplhelp>${tplHelpHtml(s.tpl)}</div>
+        <p class="hint">α・β・γ 以外の文字（- や 年、¥ など）は、その文字そのものとして探します。</p>
+      </div>
+      <div class="field"${isCustom?"":" hidden"}><label for="${id}-custom">正規表現</label>
+        <input type="text" class="mono" id="${id}-custom" data-k="custom" value="${esc(s.custom)}" placeholder="例：\\d{3}-\\d{4}" spellcheck="false"></div>
+      <div class="grid2">
+        <div class="field"><label for="${id}-pick">いくつか見つかったら</label>
+          <select id="${id}-pick" data-k="pick">${opts(PICKS, s.pick)}</select></div>
+        <div class="field"${s.pick==="nth"?"":" hidden"}><label for="${id}-nth">何番目</label>
+          <input type="number" min="1" id="${id}-nth" data-k="nth" value="${s.nth}"></div>
+      </div>
+      <details class="adv"${s.keyword?" open":""}><summary>目印の言葉で絞り込む（任意）</summary>
+        <div class="grid2">
+          <div class="field"><label for="${id}-keyword">目印の言葉</label>
+            <input type="text" id="${id}-keyword" data-k="keyword" value="${esc(s.keyword)}" placeholder="例：お支払期限"></div>
+          <div class="field"><label for="${id}-side">目印から見て</label>
+            <select id="${id}-side" data-k="side"><option value="right"${s.side==="right"?" selected":""}>右側の文字</option><option value="left"${s.side==="left"?" selected":""}>左側の文字</option></select></div>
+        </div>
+      </details>
+      <div class="result" data-result></div>
+      <div class="slotfoot"><button data-act="toBlank" class="ghost">空欄の列に変える</button></div>
+    </div>`;
+  }).join("");
+  updateResults();
+}
+function updateResults(){
+  cur.slots.forEach(s => {
+    const card = slotlist.querySelector(`.slot[data-id="${s.id}"]`);
+    if (!card) return;
+    const co = card.querySelector("[data-coords]"); if (co) co.textContent = coordsText(s.region);
+    const el = card.querySelector("[data-result]"); if (!el) return;
+    const r = extract(s);
+    const pill = {ok:"取得できた", nomatch:"一致なし", unset:"範囲未設定"}[r.status];
+    const txt = r.status === "ok" ? r.value : (r.note || (r.status === "unset" ? "範囲を指定すると、ここに結果が出ます" : ""));
+    let html = `<div class="main"><span class="pill ${r.status}">${pill}</span><span class="val">${esc(txt)}</span></div>`;
+    if (r.found.length > 1 && s.pick !== "all"){
+      const sel = s.pick === "last" ? r.found.length - 1 : s.pick === "nth" ? (s.nth|0) - 1 : 0;
+      html += `<div class="cands">候補 ${r.found.length} 個：${r.found.slice(0, 12).map((v, i) => `<button data-cand="${i}" class="${i===sel?"on":""}" title="${i+1}番目を使う">${esc(v)}</button>`).join("")}${r.found.length > 12 ? "…" : ""}</div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+/* ---------- 描画：Excel 1行 ---------- */
+function renderTable(){
+  const cols = outputOrder(), res = cols.map(extract);
+  const ac = c => c.id === activeId ? " colact" : "";
+  document.getElementById("xl").innerHTML = `<thead><tr><th class="rh"></th>${cols.map((c,i)=>`<th data-id="${c.id}" class="${ac(c)}">${colLetter(i)}</th>`).join("")}</tr></thead>
+    <tbody>
+      <tr><th class="rh">見出し</th>${cols.map(c=>`<td class="lbl${ac(c)}" data-id="${c.id}">${esc(c.label)}</td>`).join("")}</tr>
+      <tr><th class="rh">1</th>${res.map((r,i)=>`<td class="v ${r.status}${ac(cols[i])}" data-id="${cols[i].id}">${esc(r.value)}</td>`).join("")}</tr>
+    </tbody>`;
+}
+function refreshSide(){ renderSlots(); renderTable(); }
+function refreshAll(){ drawPage(); drawBoxes(); refreshSide(); }
+let raf = 0;
+function refreshLive(){ if (raf) return; raf = requestAnimationFrame(() => { raf = 0; drawPage(); drawBoxes(); updateResults(); renderTable(); }); }
+
+function setActive(id, o){
+  o = o || {};
+  const s = id && slotById(id);
+  if (s && s.type !== "extract") return;
+  activeId = id || null;
+  refreshAll();
+  if (activeId && o.scrollCard){ const c = slotlist.querySelector(`.slot[data-id="${activeId}"]`); if (c) c.scrollIntoView({block:"nearest", behavior:"smooth"}); }
+  if (activeId && o.scrollPage){
+    viewer.scrollIntoView({block:"nearest", behavior:"smooth"});
+    if (s.region){
+      const W = pagebox.offsetWidth, H = pagebox.offsetHeight;
+      viewer.scrollTo({left: pagebox.offsetLeft + (s.region.x + s.region.w/2) * W - viewer.clientWidth/2,
+                       top: pagebox.offsetTop + (s.region.y + s.region.h/2) * H - viewer.clientHeight/2, behavior:"smooth"});
+    }
+  }
+}
+
+/* ---------- プリセット ---------- */
+const presetSel = document.getElementById("presetSel"), presetName = document.getElementById("presetName"),
+      dirSel = document.getElementById("dirSel"), saveState = document.getElementById("saveState");
+let dirty = false;
+function renderPresetSel(){
+  const names = Object.keys(store.presets).sort((a,b) => a.localeCompare(b, "ja"));
+  const sv = cur && cur.__savedAs;
+  let html = names.map(n => `<option value="${esc(n)}"${n===sv?" selected":""}>${esc(n)}${n===sv&&dirty?" ●":""}</option>`).join("");
+  if (!sv) html = `<option value="" selected>（未保存）</option>` + html;
+  presetSel.innerHTML = html;
+}
+function state(text, cls){ saveState.className = "state" + (cls ? " " + cls : ""); saveState.textContent = text; }
+function setDirty(v){
+  dirty = v; renderPresetSel();
+  state(v ? "未保存の変更があります" : (cur.__savedAs ? "保存済み" : ""), v ? "dirty" : "");
+}
+function changed(){ if (!dirty) setDirty(true); }
+function openPreset(p, savedAs){
+  cur = hydrate(p); cur.__savedAs = savedAs || null; activeId = null;
+  presetName.value = cur.name || ""; dirSel.value = cur.direction;
+  setDirty(false); refreshAll();
+}
+document.getElementById("btnSave").onclick = () => {
+  const name = presetName.value.trim();
+  if (!name){ state("PDFの種類名を入れてください", "dirty"); presetName.focus(); return; }
+  if (name !== cur.__savedAs && store.presets[name] && !overwriteArmed){
+    overwriteArmed = name; state(`「${name}」はすでにあります。もう一度「保存」で上書きします`, "dirty");
+    setTimeout(() => { overwriteArmed = null; }, 4000); return;
+  }
+  overwriteArmed = null;
+  cur.name = name;
+  if (cur.__savedAs && cur.__savedAs !== name) delete store.presets[cur.__savedAs];
+  store.presets[name] = strip(cur); store.last = name; cur.__savedAs = name;
+  const ok = saveStore();
+  setDirty(false);
+  state(ok ? `「${name}」を保存しました` : "このブラウザでは保存できませんでした（プライベートモードなど）", ok ? "saved" : "dirty");
+};
+let overwriteArmed = null;
+document.getElementById("btnNew").onclick = () => {
+  openPreset({name:"", direction:cur ? cur.direction : "rtl", slots:[{label:"", type:"extract"}]}, null);
+  presetName.focus();
+};
+document.getElementById("btnDup").onclick = () => {
+  const p = strip(cur); p.name = (presetName.value.trim() || "設定") + " のコピー";
+  openPreset(p, null); setDirty(true); presetName.focus(); presetName.select();
+};
+let delArmed = null;
+document.getElementById("btnDel").onclick = e => {
+  const btn = e.currentTarget;
+  if (!cur.__savedAs){ state("まだ保存していない設定です"); return; }
+  if (!delArmed){ btn.textContent = "もう一度押すと削除"; delArmed = setTimeout(() => { btn.textContent = "削除"; delArmed = null; }, 3000); return; }
+  clearTimeout(delArmed); delArmed = null; btn.textContent = "削除";
+  const gone = cur.__savedAs;
+  delete store.presets[gone];
+  store.last = Object.keys(store.presets)[0] || null; saveStore();
+  if (store.last) openPreset(store.presets[store.last], store.last); else openPreset(samplePreset(), null);
+  state(`「${gone}」を削除しました`, "saved");
+};
+presetSel.onchange = () => { const n = presetSel.value; if (!n) return; store.last = n; saveStore(); openPreset(store.presets[n], n); };
+presetName.oninput = () => { cur.name = presetName.value; changed(); };
+dirSel.onchange = () => { cur.direction = dirSel.value; changed(); refreshAll(); };
+
+/* ---------- 列カードの操作 ---------- */
+slotlist.addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k || e.target.tagName === "SELECT") return;
+  const s = slotById(e.target.closest(".slot").dataset.id);
+  s[k] = k === "nth" ? Math.max(1, parseInt(e.target.value, 10) || 1) : e.target.value;
+  changed();
+  if (k === "label"){ drawBoxes(); renderTable(); return; }
+  if (k === "tpl"){ const h = e.target.closest(".tplbox").querySelector("[data-tplhelp]"); h.innerHTML = tplHelpHtml(s.tpl); }
+  refreshLive();
+});
+slotlist.addEventListener("change", e => {
+  if (e.target.tagName !== "SELECT") return;
+  const s = slotById(e.target.closest(".slot").dataset.id);
+  s[e.target.dataset.k] = e.target.value; changed();
+  const id = e.target.id; refreshAll();
+  const again = document.getElementById(id); if (again) again.focus();
+  if (e.target.dataset.k === "pattern" && s.pattern === "other"){ const t = document.getElementById(s.id + "-tpl"); if (t) t.focus(); }
+});
+slotlist.addEventListener("mousedown", e => { if (e.target.closest("[data-ins]")) e.preventDefault(); });
+slotlist.addEventListener("click", e => {
+  const ins = e.target.closest("[data-ins]");
+  if (ins){
+    const s = slotById(ins.closest(".slot").dataset.id);
+    const inp = document.getElementById(s.id + "-tpl");
+    const v = inp.value, a = inp.selectionStart ?? v.length, b = inp.selectionEnd ?? v.length;
+    let nv, pos;
+    if (ins.dataset.ins === "BS"){
+      if (a !== b){ nv = v.slice(0,a) + v.slice(b); pos = a; }
+      else { const head = [...v.slice(0,a)]; head.pop(); const h = head.join(""); nv = h + v.slice(a); pos = h.length; }
+    } else { nv = v.slice(0,a) + ins.dataset.ins + v.slice(b); pos = a + ins.dataset.ins.length; }
+    inp.value = nv; inp.focus(); inp.setSelectionRange(pos, pos);
+    inp.dispatchEvent(new Event("input", {bubbles:true}));
+    return;
+  }
+  const cand = e.target.closest("[data-cand]");
+  if (cand){
+    const s = slotById(cand.closest(".slot").dataset.id);
+    s.pick = "nth"; s.nth = (+cand.dataset.cand) + 1; changed(); refreshAll(); return;
+  }
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const id = b.closest(".slot").dataset.id;
+  const i = cur.slots.findIndex(x => x.id === id), s = cur.slots[i];
+  switch (b.dataset.act){
+    case "up": if (i > 0) [cur.slots[i-1], cur.slots[i]] = [cur.slots[i], cur.slots[i-1]]; break;
+    case "down": if (i < cur.slots.length-1) [cur.slots[i+1], cur.slots[i]] = [cur.slots[i], cur.slots[i+1]]; break;
+    case "del": cur.slots.splice(i, 1); if (activeId === id) activeId = null; break;
+    case "draw": setActive(activeId === id ? null : id, {scrollPage:true}); return;
+    case "toBlank": s.type = "blank"; if (!s.label) s.label = "（空欄）"; if (activeId === id) activeId = null; break;
+    case "toExtract": s.type = "extract"; if (s.label === "（空欄）") s.label = ""; break;
+  }
+  changed(); refreshAll();
+});
+slotlist.addEventListener("dblclick", e => {
+  if (e.target.closest("input,select,textarea,button,summary,label,.tplbox,.grid2")) return;
+  const c = e.target.closest(".slot"); if (!c) return;
+  const s = slotById(c.dataset.id); if (s.type !== "extract") return;
+  const sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges();
+  setActive(s.id, {scrollPage:true});
+});
+document.getElementById("xl").addEventListener("dblclick", e => {
+  const c = e.target.closest("[data-id]"); if (!c) return;
+  const s = slotById(c.dataset.id); if (!s || s.type !== "extract") return;
+  const sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges();
+  setActive(s.id, {scrollPage:true, scrollCard:true});
+});
+document.getElementById("btnAddExtract").onclick = () => {
+  const s = mk({}); cur.slots.push(s); changed(); setActive(s.id, {scrollCard:true});
+  const inp = document.getElementById(s.id + "-label"); if (inp) inp.focus({preventScroll:true});
+};
+document.getElementById("btnAddBlank").onclick = () => { cur.slots.push(mk({type:"blank", label:"（空欄）"})); changed(); refreshAll(); };
+
+/* ---------- ページ上のマウス操作（描く・動かす・大きさを変える） ---------- */
+let drag = null;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const round = v => Math.round(v * 10000) / 10000;
+const roundR = r => ({x:round(r.x), y:round(r.y), w:round(r.w), h:round(r.h)});
+function relPos(e){
+  const r = overlay.getBoundingClientRect();
+  return {x:clamp((e.clientX - r.left) / r.width, 0, 1), y:clamp((e.clientY - r.top) / r.height, 0, 1)};
+}
+overlay.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  const h = e.target.closest("[data-h]"), bx = e.target.closest(".rbox[data-id]"), p = relPos(e);
+  if (h && activeId){
+    const s = slotById(activeId); drag = {mode:"resize", h:h.dataset.h, s, orig:Object.assign({}, s.region), start:p};
+  } else if (bx){
+    if (bx.dataset.id !== activeId) setActive(bx.dataset.id, {scrollCard:true});
+    const s = slotById(bx.dataset.id); drag = {mode:"move", s, orig:Object.assign({}, s.region), start:p};
+  } else if (activeId){
+    const s = slotById(activeId); drag = {mode:"draw", s, orig:s.region ? Object.assign({}, s.region) : null, start:p};
+  } else return;
+  e.preventDefault();
+  overlay.setPointerCapture(e.pointerId);
+});
+overlay.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const p = relPos(e), dx = p.x - drag.start.x, dy = p.y - drag.start.y, o = drag.orig;
+  let r;
+  if (drag.mode === "draw"){
+    r = {x:Math.min(drag.start.x, p.x), y:Math.min(drag.start.y, p.y), w:Math.abs(dx), h:Math.abs(dy)};
+    if (r.w < MIN || r.h < MIN) return;
+  } else if (drag.mode === "move"){
+    if (!drag.changed && Math.hypot(dx, dy) < 0.002) return;
+    r = {x:clamp(o.x + dx, 0, 1 - o.w), y:clamp(o.y + dy, 0, 1 - o.h), w:o.w, h:o.h};
+  } else {
+    let x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h; const H = drag.h;
+    if (H.includes("w")) x1 = clamp(x1 + dx, 0, x2 - MIN);
+    if (H.includes("e")) x2 = clamp(x2 + dx, x1 + MIN, 1);
+    if (H.includes("n")) y1 = clamp(y1 + dy, 0, y2 - MIN);
+    if (H.includes("s")) y2 = clamp(y2 + dy, y1 + MIN, 1);
+    r = {x:x1, y:y1, w:x2 - x1, h:y2 - y1};
+  }
+  drag.s.region = roundR(r); drag.changed = true;
+  refreshLive();
+});
+function endDrag(){
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.changed){ changed(); refreshAll(); }
+}
+overlay.addEventListener("pointerup", endDrag);
+overlay.addEventListener("pointercancel", endDrag);
+overlay.addEventListener("dblclick", e => {
+  const bx = e.target.closest(".rbox[data-id]"); if (bx && bx.dataset.id !== activeId) setActive(bx.dataset.id, {scrollCard:true});
+});
+document.addEventListener("keydown", e => {
+  if (!activeId) return;
+  if (e.key === "Escape"){ setActive(null); return; }
+  if (e.target.closest && e.target.closest("input,select,textarea")) return;
+  const s = slotById(activeId); if (!s || !s.region) return;
+  const st = 0.0025, m = {ArrowLeft:[-st,0], ArrowRight:[st,0], ArrowUp:[0,-st], ArrowDown:[0,st]}[e.key];
+  if (!m) return;
+  e.preventDefault();
+  const r = Object.assign({}, s.region);
+  if (e.shiftKey){ r.w = clamp(r.w + m[0], MIN, 1 - r.x); r.h = clamp(r.h + m[1], MIN, 1 - r.y); }
+  else { r.x = clamp(r.x + m[0], 0, 1 - r.w); r.y = clamp(r.y + m[1], 0, 1 - r.h); }
+  s.region = roundR(r); changed(); refreshLive();
+});
+
+/* ---------- 見本PDFの読み込み ---------- */
+const pdfFile = document.getElementById("pdfFile");
+document.getElementById("btnPick").onclick = () => pdfFile.click();
+pdfFile.onchange = () => { if (pdfFile.files[0]) loadPdf(pdfFile.files[0]); pdfFile.value = ""; };
+document.getElementById("btnSample").onclick = useSample;
+["dragenter","dragover"].forEach(t => viewer.addEventListener(t, e => { e.preventDefault(); pagebox.classList.add("dragover"); }));
+["dragleave","drop"].forEach(t => viewer.addEventListener(t, e => { e.preventDefault(); pagebox.classList.remove("dragover"); }));
+viewer.addEventListener("drop", e => {
+  const f = [...(e.dataTransfer.files || [])].find(f => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+  if (f) loadPdf(f); else setNote("PDFファイルをドロップしてください。");
+});
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => e.preventDefault());
+
+/* ---------- コピー ---------- */
+function tsvCell(v){ v = v == null ? "" : String(v); return /[\t\n\r"]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+document.getElementById("btnCopy").onclick = async () => {
+  const cols = outputOrder();
+  const rows = [];
+  if (document.getElementById("withHeader").checked) rows.push(cols.map(s => s.label || ""));
+  rows.push(cols.map(s => extract(s).value));
+  const tsv = rows.map(r => r.map(tsvCell).join("\t")).join("\r\n");
+  const td = document.getElementById("asText").checked ? ` style="mso-number-format:'\\@'"` : "";
+  const html = `<table>${rows.map(r => `<tr>${r.map(v => `<td${td}>${esc(v)}</td>`).join("")}</tr>`).join("")}</table>`;
+  const msg = document.getElementById("copyMsg"), fb = document.getElementById("copyFallback");
+  const miss = cols.filter(s => s.type === "extract" && extract(s).status !== "ok").length;
+  const done = `${cols.length} 列分をコピーしました。Excelで貼り付けてください。` + (miss ? `（取得できなかった列が ${miss} 個あり、空欄になっています）` : "");
+  fb.hidden = true; msg.className = "toast";
+  try{
+    if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) throw 0;
+    await navigator.clipboard.write([new ClipboardItem({"text/plain":new Blob([tsv], {type:"text/plain"}), "text/html":new Blob([html], {type:"text/html"})})]);
+    msg.textContent = done;
+  }catch(e1){
+    try{ await navigator.clipboard.writeText(tsv); msg.textContent = done; }
+    catch(e2){ fb.value = tsv; fb.hidden = false; fb.focus(); fb.select(); msg.className = "toast err"; msg.textContent = "自動コピーが使えない環境です。下の枠が選択されているので Ctrl+C でコピーしてください。"; }
+  }
+};
+
+/* ---------- 書き出し・読み込み ---------- */
+const jsonBox = document.getElementById("jsonBox"), ioMsg = document.getElementById("ioMsg");
+function io(t, err){ ioMsg.className = "toast" + (err ? " err" : ""); ioMsg.textContent = t; }
+document.getElementById("btnExport").onclick = () => {
+  jsonBox.value = JSON.stringify({app:"pdfpick", version:1, presets:store.presets}, null, 2);
+  io(`${Object.keys(store.presets).length} 件の設定を表示しました`);
+};
+document.getElementById("btnCopyJson").onclick = async () => {
+  try{ await navigator.clipboard.writeText(jsonBox.value); io("コピーしました"); }
+  catch(e){ jsonBox.focus(); jsonBox.select(); io("枠を選択したので Ctrl+C でコピーしてください", true); }
+};
+function importText(text){
+  let d; try{ d = JSON.parse(text); }catch(e){ io("読み込めませんでした。書き出した文字列をそのまま貼り付けてください。", true); return; }
+  const list = d && d.presets ? Object.values(d.presets) : (d && d.slots ? [d] : []);
+  let n = 0;
+  for (const p of list) if (p && p.name && Array.isArray(p.slots)){ store.presets[p.name] = strip(hydrate(p)); n++; }
+  if (!n){ io("設定が見つかりませんでした。", true); return; }
+  saveStore(); renderPresetSel();
+  io(`${n} 件の設定を読み込みました（同じ名前は上書き）。上の「保存済みの設定」から選べます。`);
+}
+document.getElementById("btnImport").onclick = () => importText(jsonBox.value);
+const jsonFile = document.getElementById("jsonFile");
+document.getElementById("btnJsonFile").onclick = () => jsonFile.click();
+jsonFile.onchange = async () => { const f = jsonFile.files[0]; if (f) importText(await f.text()); jsonFile.value = ""; };
+
+/* ---------- 起動 ---------- */
+page.items = buildSampleItems();
+setNote("架空のサンプル請求書を表示しています。手元のPDFをこの枠にドロップすると、1ページ目に差し替わります。PDFも文字も保存しません。");
+if (store.last && store.presets[store.last]) openPreset(store.presets[store.last], store.last);
+else openPreset(samplePreset(), null);
+layoutPage(false);
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => layoutPage(true), 120); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (page.source === "sample"){ page.items = buildSampleItems(); refreshAll(); } });
+})();
+</script>
