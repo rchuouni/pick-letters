@@ -1,3 +1,10 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
 <title>PDF抜き出し 事前設定</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,6 +31,7 @@
   --ok:#62c08c; --ok-weak:#17322a; --warn:#f0757c; --warn-weak:#3a1c20; --idle:#8d98a8; --idle-weak:#252e38;
   color-scheme:dark;}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
 .wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
@@ -154,6 +162,35 @@ table.xl td.v.blank{background:repeating-linear-gradient(45deg,transparent 0 6px
 textarea{min-height:110px;font-family:var(--f-mono);font-size:12px}
 .toast{font-size:13px;color:var(--ok);font-weight:700}
 .toast.err{color:var(--warn)}
+.outcfg{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end}
+.outcfg .sepf{flex:1 1 360px}
+.seprow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seprow input{width:130px;font-size:16px;text-align:center}
+.sepchips{display:flex;gap:4px;flex-wrap:wrap}
+.sepchips button{font-family:var(--f-mono);font-size:12px;padding:2px 10px;border-radius:999px;min-width:34px}
+.sepchips button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cellprev{display:flex;flex-direction:column;gap:8px}
+.xlmini{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.xlmini .hdr,.xlmini .rowc{display:grid;grid-template-columns:34px minmax(0,1fr)}
+.xlmini .hdr span{background:var(--surface-2);color:var(--muted);font-size:11px;text-align:center;padding:3px;font-family:var(--f-mono)}
+.xlmini .hdr span:first-child,.xlmini .rh{border-right:1px solid var(--line)}
+.xlmini .rh{background:var(--surface-2);color:var(--muted);font-size:11px;text-align:center;padding:10px 3px;border-top:1px solid var(--line);font-family:var(--f-mono)}
+.xlmini .cell{padding:9px 12px;font-family:var(--f-mono);font-size:14px;line-height:1.9;overflow-wrap:anywhere;border-top:1px solid var(--line);box-shadow:inset 0 0 0 2px var(--ok);min-width:0}
+.part{border-bottom:3px solid var(--c);cursor:pointer;padding:0 1px}
+.part:hover,.part.on{background:color-mix(in srgb,var(--c) 14%,transparent)}
+.part.nomatch,.part.unset{background:var(--warn-weak)}
+.part.blank{border-bottom-style:dashed}
+.part i{font-style:normal;font-size:10px;color:var(--muted);font-family:var(--f-ui);padding:0 2px}
+.sep{color:var(--accent);font-weight:700;background:var(--accent-weak);border-radius:2px;white-space:pre}
+.cellmeta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.parts{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.parts li{display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;max-width:100%;min-width:0}
+.parts li.on{box-shadow:0 0 0 2px var(--c)}
+.parts li b{font-family:var(--f-mono);color:var(--c)}
+.parts li .pl{color:var(--muted)}
+.parts li .pv{font-family:var(--f-mono);overflow-wrap:anywhere;min-width:0}
+.parts li.nomatch .pv,.parts li.unset .pv{color:var(--warn)}
+.parts li.blank .pv{color:var(--idle)}
 .topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .faqbtn{display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .faqbtn .q{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-family:var(--f-mono)}
@@ -201,10 +238,10 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
       <input type="text" id="presetName" placeholder="例：青葉精機 請求書">
     </div>
     <div class="field">
-      <label for="dirSel">列の設定順</label>
+      <label for="dirSel">設定する順番</label>
       <select id="dirSel">
-        <option value="rtl">右端の列から</option>
-        <option value="ltr">左端の列から</option>
+        <option value="rtl">アウトプットの右端から</option>
+        <option value="ltr">アウトプットの左端から</option>
       </select>
     </div>
     <div class="acts">
@@ -244,14 +281,14 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
 
     <section class="panel" aria-label="アウトプットの列設定">
       <div class="panelhead">
-        <h2>アウトプットの列</h2>
+        <h2>アウトプットの項目</h2>
         <span class="hint" id="slotCount"></span>
       </div>
-      <p class="hint">列のカードをダブルクリックすると範囲の指定に入ります。ページ上をドラッグして囲み、枠は動かしたり角を引っぱって大きさを変えたりできます。</p>
+      <p class="hint">項目のカードをダブルクリックすると範囲の指定に入ります。ページ上をドラッグして囲み、枠は動かしたり角を引っぱって大きさを変えたりできます。</p>
       <div class="slotlist" id="slotlist"></div>
       <div class="addrow">
-        <button id="btnAddExtract">＋ 抜き出す列を追加</button>
-        <button id="btnAddBlank">＋ 空欄の列を追加</button>
+        <button id="btnAddExtract">＋ 抜き出す項目を追加</button>
+        <button id="btnAddBlank">＋ 空欄の項目を追加</button>
       </div>
     </section>
   </div>
@@ -259,9 +296,32 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
   <section class="panel" aria-label="Excelに貼り付けたときの形">
     <div class="panelhead">
       <h2>Excelに貼り付けたときの形</h2>
-      <span class="hint">左から A列, B列 … の順にセルへ入ります。列をダブルクリックすると、その列の範囲指定に入ります。</span>
+      <span class="hint" id="outHint"></span>
     </div>
-    <div class="tablewrap"><table class="xl" id="xl"></table></div>
+    <div class="outcfg">
+      <div class="field"><label for="modeSel">貼り付け方</label>
+        <select id="modeSel">
+          <option value="single">1つのセルにまとめる（A1だけ）</option>
+          <option value="multi">列ごとに分ける（A1・B1・C1…）</option>
+        </select></div>
+      <div class="field sepf" id="sepField"><label for="sepInput">区切り記号（空欄なら、すき間なく続けて並べます）</label>
+        <div class="seprow">
+          <input type="text" id="sepInput" class="mono" placeholder="例：/" autocomplete="off" spellcheck="false" maxlength="20">
+          <div class="sepchips" id="sepChips" role="group" aria-label="よく使う区切り記号"></div>
+        </div></div>
+      <label class="check" id="skipField"><input type="checkbox" id="skipEmpty"> 空の項目は、区切り記号ごと省く</label>
+    </div>
+    <div id="outView">
+      <div id="singlePreview" class="cellprev">
+        <div class="xlmini" aria-label="A1セルのプレビュー">
+          <div class="hdr"><span></span><span>A</span></div>
+          <div class="rowc"><span class="rh">1</span><div class="cell" id="cellA1"></div></div>
+        </div>
+        <div class="cellmeta" id="cellMeta"></div>
+        <ol class="parts" id="partList" aria-label="項目の内訳"></ol>
+      </div>
+      <div class="tablewrap" id="multiPreview"><table class="xl" id="xl"></table></div>
+    </div>
     <div class="outacts">
       <button class="primary" id="btnCopy">コピー（Excelに貼り付け用）</button>
       <label class="check"><input type="checkbox" id="withHeader"> 見出し行も一緒にコピー</label>
@@ -356,7 +416,7 @@ const FONT_STACK = '"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",s
 
 function samplePreset(){
   return {
-    name:"請求書（サンプル）", direction:"rtl",
+    name:"請求書（サンプル）", direction:"rtl", mode:"single", sep:"/", skipEmpty:false,
     slots:[
       mk({label:"支払期限",region:{x:.07,y:.548,w:.42,h:.028},pattern:"date",keyword:"お支払期限",side:"right"}),
       mk({label:"合計金額",region:{x:.62,y:.440,w:.35,h:.072},pattern:"money",pick:"last"}),
@@ -389,11 +449,14 @@ function saveStore(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(store
 function hydrate(p){
   const c = JSON.parse(JSON.stringify(p));
   c.direction = c.direction === "ltr" ? "ltr" : "rtl";
+  c.mode = c.mode === "multi" ? "multi" : "single";
+  c.sep = typeof c.sep === "string" ? c.sep.replace(/[\t\r\n]/g, "") : "";
+  c.skipEmpty = !!c.skipEmpty;
   c.slots = (c.slots||[]).map(s => { const o = Object.assign({}, s); delete o.id; if (!PATTERNS[o.pattern]) delete o.pattern; return mk(o); });
   return c;
 }
 function strip(p){
-  return {name:p.name, direction:p.direction, slots:p.slots.map(s => {
+  return {name:p.name, direction:p.direction, mode:p.mode, sep:p.sep, skipEmpty:p.skipEmpty, slots:p.slots.map(s => {
     const o = {label:s.label, type:s.type};
     if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth});
     return o; })};
@@ -602,6 +665,8 @@ function extract(slot){
 function colLetter(i){ let s = ""; i++; while (i > 0){ const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; }
 function outputOrder(){ return cur.direction === "rtl" ? cur.slots.slice().reverse() : cur.slots.slice(); }
 function colIndexOf(i){ return cur.direction === "rtl" ? cur.slots.length - 1 - i : i; }
+function posName(ci){ return cur.mode === "multi" ? colLetter(ci) : String(ci + 1); }
+function posFull(ci){ return cur.mode === "multi" ? colLetter(ci) + "列" : (ci + 1) + "番目"; }
 function colorOf(slot){ return COLORS[cur.slots.indexOf(slot) % COLORS.length]; }
 
 /* ---------- 描画：ページ ---------- */
@@ -639,7 +704,7 @@ function drawBoxes(){
     d.style.setProperty("--c", colorOf(s));
     Object.assign(d.style, {left:s.region.x*100+"%", top:s.region.y*100+"%", width:s.region.w*100+"%", height:s.region.h*100+"%"});
     const t = document.createElement("span"); t.className = "tag";
-    t.textContent = `${colLetter(colIndexOf(i))}　${s.label || "（名前なし）"}`;
+    t.textContent = `${posName(colIndexOf(i))}　${s.label || "（名前なし）"}`;
     d.appendChild(t);
     if (on) for (const h of HANDLES){ const e = document.createElement("i"); e.className = "hd"; e.dataset.h = h; d.appendChild(e); }
     d.title = on ? "ドラッグで移動、四隅と辺でサイズ変更" : "クリックでこの列を選ぶ";
@@ -651,7 +716,7 @@ function drawBoxes(){
   if (act){
     bar.hidden = false; bar.style.setProperty("--c", colorOf(act));
     const i = cur.slots.indexOf(act);
-    bar.innerHTML = `<span><span class="sw"></span><b>${colLetter(colIndexOf(i))}列「${esc(act.label || "名前なし")}」</b>の範囲を指定中。${act.region ? "枠をドラッグで移動、角や辺でサイズ変更。外側をドラッグすると引き直せます。" : "ページ上をドラッグして囲んでください。"}<br><span class="keys"><kbd>←↑→↓</kbd> 少しずつ移動　<kbd>Shift</kbd>＋矢印 サイズ変更　<kbd>Esc</kbd> 終了</span></span>`;
+    bar.innerHTML = `<span><span class="sw"></span><b>${posFull(colIndexOf(i))}「${esc(act.label || "名前なし")}」</b>の範囲を指定中。${act.region ? "枠をドラッグで移動、角や辺でサイズ変更。外側をドラッグすると引き直せます。" : "ページ上をドラッグして囲んでください。"}<br><span class="keys"><kbd>←↑→↓</kbd> 少しずつ移動　<kbd>Shift</kbd>＋矢印 サイズ変更　<kbd>Esc</kbd> 終了</span></span>`;
     const b = document.createElement("button"); b.className = "primary"; b.textContent = "指定を終える";
     b.onclick = () => setActive(null);
     bar.appendChild(b);
@@ -666,24 +731,24 @@ function coordsText(r){ return r ? `左 ${(r.x*100).toFixed(1)}%・上 ${(r.y*10
 
 function renderSlots(){
   const n = cur.slots.length;
-  document.getElementById("slotCount").textContent = `${n} 列`;
+  document.getElementById("slotCount").textContent = `${n} 項目`;
   slotlist.innerHTML = cur.slots.map((s, i) => {
     const ord = cur.direction === "rtl" ? `右から${i+1}` : `左から${i+1}`;
     const c = colorOf(s), id = s.id;
     const head = `
       <div class="slothead">
-        <div class="colno"><b>${colLetter(colIndexOf(i))}</b><span>${ord}列目</span></div>
+        <div class="colno"><b>${posName(colIndexOf(i))}</b><span>${ord}${cur.mode === "multi" ? "列" : "番"}目</span></div>
         <input type="text" id="${id}-label" data-k="label" value="${esc(s.label)}" placeholder="見出し（例：請求番号）" aria-label="見出し">
         <div class="tools">
           <button data-act="up" title="ひとつ前へ" aria-label="ひとつ前へ"${i===0?" disabled":""}>↑</button>
           <button data-act="down" title="ひとつ後へ" aria-label="ひとつ後へ"${i===n-1?" disabled":""}>↓</button>
-          <button data-act="del" class="danger" title="この列を削除" aria-label="この列を削除">×</button>
+          <button data-act="del" class="danger" title="この項目を削除" aria-label="この項目を削除">×</button>
         </div>
       </div>`;
     if (s.type === "blank"){
       return `<div class="slot blank" data-id="${id}" style="--c:${c}">${head}
-        <div class="regionrow"><span class="hint">空欄の列です。Excelでは何も入らないセルになります。</span>
-        <button data-act="toExtract" class="ghost">抜き出す列に変える</button></div></div>`;
+        <div class="regionrow"><span class="hint">空欄の項目です。文字は入らず、位置だけを確保します。</span>
+        <button data-act="toExtract" class="ghost">抜き出す項目に変える</button></div></div>`;
     }
     const isTpl = s.pattern === "other", isCustom = s.pattern === "custom";
     return `<div class="slot${id===activeId?" active":""}" data-id="${id}" style="--c:${c}">${head}
@@ -724,7 +789,7 @@ function renderSlots(){
         </div>
       </details>
       <div class="result" data-result></div>
-      <div class="slotfoot"><button data-act="toBlank" class="ghost">空欄の列に変える</button></div>
+      <div class="slotfoot"><button data-act="toBlank" class="ghost">空欄の項目に変える</button></div>
     </div>`;
   }).join("");
   updateResults();
@@ -747,8 +812,40 @@ function updateResults(){
   });
 }
 
-/* ---------- 描画：Excel 1行 ---------- */
+/* ---------- 描画：Excelに貼る形 ---------- */
+const clean = v => String(v == null ? "" : v).replace(/[\t\r\n]+/g, " ");
+const SEPS = [["","なし"],["/","/"],["・","・"],["-","-"],["_","_"],[" ","空白"],["、","、"],[",",","],["|","|"]];
+function allParts(){ return outputOrder().map(s => ({s, r:extract(s)})); }
+function joinedParts(all){ all = all || allParts(); return cur.skipEmpty ? all.filter(p => p.r.value !== "") : all; }
+function joinedText(parts){ return parts.map(p => clean(p.r.value)).join(cur.sep); }
+function renderSepChips(){
+  document.getElementById("sepChips").innerHTML = SEPS.map(([v, l]) =>
+    `<button type="button" data-sep="${esc(v)}" class="${cur.sep === v ? "on" : ""}" title="${v ? "「" + esc(v) + "」で区切る" : "区切らずに続けて並べる"}">${esc(l)}</button>`).join("");
+}
 function renderTable(){
+  const single = cur.mode !== "multi";
+  document.getElementById("singlePreview").hidden = !single;
+  document.getElementById("multiPreview").hidden = single;
+  document.getElementById("sepField").hidden = !single;
+  document.getElementById("skipField").hidden = !single;
+  document.getElementById("outHint").textContent = single
+    ? "すべての項目を区切り記号でつないで、A1セル1つに入れます。項目をダブルクリックすると範囲の指定に入ります。"
+    : "左から A列, B列 … の順にセルへ入ります。列をダブルクリックすると範囲の指定に入ります。";
+  if (single){
+    renderSepChips();
+    const all = allParts(), parts = joinedParts(all);
+    const on = p => p.s.id === activeId ? " on" : "";
+    document.getElementById("cellA1").innerHTML = parts.length
+      ? parts.map((p, i) => (i && cur.sep ? `<span class="sep">${esc(cur.sep)}</span>` : "") +
+          `<span class="part ${p.r.status}${on(p)}" data-id="${p.s.id}" style="--c:${colorOf(p.s)}" title="${esc(p.s.label || "（名前なし）")}">${p.r.value ? esc(clean(p.r.value)) : `<i>${p.s.type === "blank" ? "空欄" : "未取得"}</i>`}</span>`).join("")
+      : `<span class="hint">入る文字がありません</span>`;
+    const txt = joinedText(parts);
+    const miss = all.filter(p => p.s.type === "extract" && p.r.status !== "ok").length;
+    document.getElementById("cellMeta").textContent = `A1に入る文字：${txt.length} 文字（${all.length} 項目）` + (miss ? `　取れていない項目：${miss}` : "");
+    document.getElementById("partList").innerHTML = all.map((p, i) =>
+      `<li data-id="${p.s.id}" style="--c:${colorOf(p.s)}" class="${p.r.status}${on(p)}"><b>${i + 1}</b><span class="pl">${esc(p.s.label || "（名前なし）")}</span><span class="pv">${p.r.value ? esc(clean(p.r.value)) : (p.s.type === "blank" ? "空欄" : p.r.status === "unset" ? "範囲未設定" : "一致なし")}</span></li>`).join("");
+    return;
+  }
   const cols = outputOrder(), res = cols.map(extract);
   const ac = c => c.id === activeId ? " colact" : "";
   document.getElementById("xl").innerHTML = `<thead><tr><th class="rh"></th>${cols.map((c,i)=>`<th data-id="${c.id}" class="${ac(c)}">${colLetter(i)}</th>`).join("")}</tr></thead>
@@ -780,6 +877,7 @@ function setActive(id, o){
 }
 
 /* ---------- プリセット ---------- */
+const modeSel = document.getElementById("modeSel"), sepInput = document.getElementById("sepInput"), skipEmpty = document.getElementById("skipEmpty");
 const presetSel = document.getElementById("presetSel"), presetName = document.getElementById("presetName"),
       dirSel = document.getElementById("dirSel"), saveState = document.getElementById("saveState");
 let dirty = false;
@@ -799,6 +897,7 @@ function changed(){ if (!dirty) setDirty(true); }
 function openPreset(p, savedAs){
   cur = hydrate(p); cur.__savedAs = savedAs || null; activeId = null;
   presetName.value = cur.name || ""; dirSel.value = cur.direction;
+  modeSel.value = cur.mode; sepInput.value = cur.sep; skipEmpty.checked = cur.skipEmpty;
   setDirty(false); refreshAll();
 }
 document.getElementById("btnSave").onclick = () => {
@@ -818,7 +917,7 @@ document.getElementById("btnSave").onclick = () => {
 };
 let overwriteArmed = null;
 document.getElementById("btnNew").onclick = () => {
-  openPreset({name:"", direction:cur ? cur.direction : "rtl", slots:[{label:"", type:"extract"}]}, null);
+  openPreset({name:"", direction:cur ? cur.direction : "rtl", mode:cur ? cur.mode : "single", sep:"", skipEmpty:false, slots:[{label:"", type:"extract"}]}, null);
   presetName.focus();
 };
 document.getElementById("btnDup").onclick = () => {
@@ -840,6 +939,13 @@ document.getElementById("btnDel").onclick = e => {
 presetSel.onchange = () => { const n = presetSel.value; if (!n) return; store.last = n; saveStore(); openPreset(store.presets[n], n); };
 presetName.oninput = () => { cur.name = presetName.value; changed(); };
 dirSel.onchange = () => { cur.direction = dirSel.value; changed(); refreshAll(); };
+modeSel.onchange = () => { cur.mode = modeSel.value; changed(); refreshAll(); };
+sepInput.oninput = () => { cur.sep = sepInput.value.replace(/[\t\r\n]/g, ""); changed(); renderTable(); };
+document.getElementById("sepChips").addEventListener("click", e => {
+  const b = e.target.closest("[data-sep]"); if (!b) return;
+  cur.sep = b.dataset.sep; sepInput.value = cur.sep; changed(); renderTable();
+});
+skipEmpty.onchange = () => { cur.skipEmpty = skipEmpty.checked; changed(); renderTable(); };
 
 /* ---------- 列カードの操作 ---------- */
 slotlist.addEventListener("input", e => {
@@ -900,7 +1006,7 @@ slotlist.addEventListener("dblclick", e => {
   const sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges();
   setActive(s.id, {scrollPage:true});
 });
-document.getElementById("xl").addEventListener("dblclick", e => {
+document.getElementById("outView").addEventListener("dblclick", e => {
   const c = e.target.closest("[data-id]"); if (!c) return;
   const s = slotById(c.dataset.id); if (!s || s.type !== "extract") return;
   const sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges();
@@ -997,16 +1103,27 @@ document.addEventListener("drop", e => e.preventDefault());
 /* ---------- コピー ---------- */
 function tsvCell(v){ v = v == null ? "" : String(v); return /[\t\n\r"]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 document.getElementById("btnCopy").onclick = async () => {
+  const single = cur.mode !== "multi";
   const cols = outputOrder();
+  const miss = cols.filter(s => s.type === "extract" && extract(s).status !== "ok").length;
+  const withHeader = document.getElementById("withHeader").checked;
   const rows = [];
-  if (document.getElementById("withHeader").checked) rows.push(cols.map(s => s.label || ""));
-  rows.push(cols.map(s => extract(s).value));
+  let done;
+  if (single){
+    const parts = joinedParts();
+    if (withHeader) rows.push([parts.map(p => clean(p.s.label)).join(cur.sep)]);
+    rows.push([joinedText(parts)]);
+    done = `A1セル1つに入る形でコピーしました（${rows[rows.length-1][0].length} 文字）。Excelで貼り付けてください。` + (withHeader ? "見出しはA1、値はA2に入ります。" : "");
+  } else {
+    if (withHeader) rows.push(cols.map(s => clean(s.label)));
+    rows.push(cols.map(s => clean(extract(s).value)));
+    done = `${cols.length} 列分をコピーしました。Excelで貼り付けてください。`;
+  }
+  if (miss) done += `（取れていない項目が ${miss} 個あり、その部分は空になっています）`;
   const tsv = rows.map(r => r.map(tsvCell).join("\t")).join("\r\n");
   const td = document.getElementById("asText").checked ? ` style="mso-number-format:'\\@'"` : "";
   const html = `<table>${rows.map(r => `<tr>${r.map(v => `<td${td}>${esc(v)}</td>`).join("")}</tr>`).join("")}</table>`;
   const msg = document.getElementById("copyMsg"), fb = document.getElementById("copyFallback");
-  const miss = cols.filter(s => s.type === "extract" && extract(s).status !== "ok").length;
-  const done = `${cols.length} 列分をコピーしました。Excelで貼り付けてください。` + (miss ? `（取得できなかった列が ${miss} 個あり、空欄になっています）` : "");
   fb.hidden = true; msg.className = "toast";
   try{
     if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) throw 0;
@@ -1045,12 +1162,13 @@ jsonFile.onchange = async () => { const f = jsonFile.files[0]; if (f) importText
 
 /* ---------- よくある質問 ---------- */
 const FAQ = [
-  ["はじめに", "このページは何をするものですか？", "<p>PDFの決まった場所から文字を拾い、Excelに貼り付ける順番で並べるための「設定」を作る画面です。PDFの種類（請求書A、注文書Bなど）ごとに、どの範囲から、どんな形の文字を、何列目に入れるかを決めて保存します。</p>"],
+  ["はじめに", "このページは何をするものですか？", "<p>PDFの決まった場所から文字を拾い、Excelに貼り付ける形に並べるための「設定」を作る画面です。PDFの種類（請求書A、注文書Bなど）ごとに、どの範囲から、どんな形の文字を、どの順番で並べるかを決めて保存します。</p>"],
   ["はじめに", "お金はかかりますか？", "<p>かかりません。サーバーやAPIを使わず、ブラウザの中だけで動きます。</p>"],
-  ["はじめに", "どのブラウザで使えますか？", "<p>Chrome または Edge の最新版をおすすめします。Safari や Firefox でも基本的には動きますが、コピーの動きが少し違うことがあります。</p>"],
+  ["はじめに", "どのブラウザで使えますか？", "<p>Chrome または Edge の最新版をおすすめします。Safari や Firefox でも基本的には動きますが、コピーの動きや設定の保存が少し違うことがあります。</p>"],
   ["はじめに", "インターネットにつながっていないと使えませんか？", "<p>今の版は、PDFを読む部品（pdf.js）と文字の書体をネットから読み込むため、ネット接続が必要です。PDFの中身がネットに送られることはありません。</p>"],
   ["はじめに", "スマートフォンでも使えますか？", "<p>表示はできますが、範囲をドラッグする操作はパソコンのマウスのほうが正確です。設定作業はパソコンで行ってください。</p>"],
   ["はじめに", "最初に表示される請求書は何ですか？", "<p>動作確認用の<b>架空のサンプル</b>です。実在の会社とは関係ありません。「見本PDFを選ぶ」で自分のPDFに差し替えられます。</p>"],
+  ["はじめに", "「アウトプット」とは何ですか？", "<p>PDFから拾った文字を、決めた順番と区切り記号でつないだもの（Excelに貼り付ける文字）のことです。アウトプットは「項目」の並びでできています。</p>"],
 
   ["PDF", "どんなPDFが使えますか？", "<p>文字が埋め込まれたPDF（PDF上で文字を選択・コピーできるもの）が使えます。Word や Excel から書き出したPDF、会計ソフトが作るPDFなどが当てはまります。</p>"],
   ["PDF", "スキャンしたPDFは使えますか？", "<p>使えません。スキャンしたPDFは文字ではなく画像なので、拾う文字がありません。読み込んだときに「文字が見つかりませんでした」と出たら、このケースです。</p>"],
@@ -1060,13 +1178,13 @@ const FAQ = [
   ["PDF", "見本PDFを差し替えると、設定は消えますか？", "<p>消えません。範囲はページの大きさに対する割合で覚えているので、同じ種類のPDFに差し替えても同じ場所を指します。結果がその場で新しいPDFの内容に変わるので、別の月の請求書で確認するのにも使えます。</p>"],
   ["PDF", "用紙サイズが違うPDFでも同じ場所を拾えますか？", "<p>範囲はページの幅・高さに対する割合で覚えているので、A4とレターのように少し違う程度なら同じ場所を指します。ただし、レイアウト自体が違う帳票では、別の設定を作ってください。</p>"],
 
-  ["範囲の指定", "範囲はどうやって指定しますか？", "<ul><li>列カードの余白をダブルクリックします（または「範囲を指定する」ボタン）。</li><li>左のページ上をドラッグして、拾いたい場所を囲みます。</li><li>終わったら <kbd>Esc</kbd> か「指定を終える」を押します。</li></ul>"],
-  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（列番号や結果が表示されているあたり）をダブルクリックしてください。下のExcel表の列をダブルクリックしても入れます。空欄の列は範囲を持たないので、指定に入りません。</p>"],
+  ["範囲の指定", "範囲はどうやって指定しますか？", "<ul><li>項目カードの余白をダブルクリックします（または「範囲を指定する」ボタン）。</li><li>左のページ上をドラッグして、拾いたい場所を囲みます。</li><li>終わったら <kbd>Esc</kbd> か「指定を終える」を押します。</li></ul>"],
+  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（番号や結果が表示されているあたり）をダブルクリックしてください。下の「Excelに貼り付けたときの形」の項目をダブルクリックしても入れます。空欄の項目は範囲を持たないので、指定に入りません。</p>"],
   ["範囲の指定", "枠の位置や大きさを直したい。", "<ul><li>枠の中をドラッグすると移動します。</li><li>四隅と辺の小さな四角をドラッグすると大きさが変わります。</li><li>矢印キーで少しずつ移動、<kbd>Shift</kbd>＋矢印キーで少しずつ大きさを変えられます。</li><li>枠の外をドラッグすると、最初から引き直せます。</li></ul>"],
   ["範囲の指定", "細かい場所がうまく囲めません。", "<p>「＋」で拡大してから囲んでください。<kbd>Ctrl</kbd>を押しながらマウスホイールを回しても拡大・縮小できます。「幅に合わせる」「全体を表示」で元の大きさに戻せます。</p>"],
   ["範囲の指定", "どこまで囲めば、その文字が範囲に入りますか？", "<p>文字のかたまりの<b>中心</b>が枠の中にあれば、範囲に入ったと判定します。範囲指定中は、範囲に入った文字が薄く色付きで表示されるので、それを目安にしてください。</p>"],
-  ["範囲の指定", "範囲を少し広めに取ってもいいですか？", "<p>はい。拾う文字の規則（日付・金額・その他など）で絞り込むので、多少広めに囲んでも大丈夫です。逆に、月によって位置が少しずれる帳票では、広めに取っておくほうが安定します。</p>"],
-  ["範囲の指定", "枠の色は何を表していますか？", "<p>列ごとの色です。列カードの左端の色と、ページ上の枠の色が対応しています。枠の上のラベルには、Excelの列（A、B…）と見出しが出ます。</p>"],
+  ["範囲の指定", "範囲を少し広めに取ってもいいですか？", "<p>はい。拾う文字の規則（日付・金額・その他など）で絞り込むので、多少広めに囲んでも大丈夫です。月によって位置が少しずれる帳票では、広めに取っておくほうが安定します。</p>"],
+  ["範囲の指定", "枠の色や番号は何を表していますか？", "<p>色は項目ごとの色です。項目カードの左端、ページ上の枠、下のプレビューの下線が同じ色で対応しています。枠の上の番号は、アウトプットの何番目か（列ごとに分ける場合はExcelの列）を表します。</p>"],
 
   ["拾う文字の規則", "「拾う文字の規則」はどれを選べばいいですか？", "<ul><li>日付・金額・郵便番号・電話番号：その形の文字だけを拾います。</li><li>範囲内の1行ずつ：囲んだ場所の行をそのまま拾います。会社名など決まった形がないものに向きます。</li><li>その他：α・β・γ で文字の形を自分で作ります。品番や請求番号に向きます。</li></ul>"],
   ["拾う文字の規則", "「その他」の α・β・γ とは何ですか？", "<ul><li>α：英字1文字（A〜Z、a〜z）</li><li>β：数字1文字（0〜9）</li><li>γ：記号1文字（- / . ¥ # % など）</li><li>…：直前の種類が1文字以上いくつでも続く</li></ul><p>例：<code>ααα-ββββ-ββββ</code> は INV-2026-0142 のような文字を拾います。</p>"],
@@ -1075,28 +1193,37 @@ const FAQ = [
   ["拾う文字の規則", "「-」や「年」など、決まった文字を含めたい。", "<p>そのまま入力してください。α・β・γ・… 以外の文字は、その文字そのものとして探します。例：<code>β…年β…月β…日</code></p>"],
   ["拾う文字の規則", "全角の数字や英字も拾えますか？", "<p>拾えます。PDFの文字は全角・半角をそろえてから探すので、「ＡＢ－１２０３」も「AB-1203」として見つかります。</p>"],
   ["拾う文字の規則", "長い番号の一部だけが拾われてしまわないか心配です。", "<p>英字や数字で始まる・終わる形は、前後に同じ種類の文字が続いている場合は拾いません。例えば <code>ββββ</code> は 1234567 の中の 1234 を拾いません。</p>"],
-  ["拾う文字の規則", "入力した形が正しいか確かめたい。", "<p>入力欄の下に、形の説明（英字 3文字、「-」、数字 4文字…）と「例」が出ます。また、列カードの下に実際に拾えた文字が出るので、そこで確認してください。</p>"],
+  ["拾う文字の規則", "入力した形が正しいか確かめたい。", "<p>入力欄の下に、形の説明（英字 3文字、「-」、数字 4文字…）と「例」が出ます。また、項目カードの下に実際に拾えた文字が出るので、そこで確認してください。</p>"],
   ["拾う文字の規則", "「目印の言葉で絞り込む」はどう使いますか？", "<p>範囲の中で、目印の言葉がある行だけを対象にします。「目印から見て右側の文字」を選ぶと、その言葉より右にある文字から拾います。例：目印「お支払期限」＋右側＋日付 → 支払期限の日付だけを拾います。</p>"],
   ["拾う文字の規則", "正規表現は使えますか？", "<p>「正規表現（上級者向け）」を選ぶと直接入力できます。普段は「その他」で十分です。</p>"],
 
   ["結果の確認", "「一致なし」と赤く出ます。", "<ul><li>範囲が文字の場所を囲んでいるか確認してください（範囲指定中、範囲に入った文字が色付きで表示されます）。</li><li>規則が実際の文字の形と合っているか確認してください。</li><li>目印の言葉を入れている場合、その言葉が範囲の中にあるか確認してください。</li></ul>"],
   ["結果の確認", "違う値が取れてしまいます。", "<p>範囲の中に同じ形の文字が複数あると、最初の1つが選ばれます。カードの「候補」に見つかった文字が並ぶので、正しいものを押してください。範囲を狭めるか、目印の言葉で絞り込むのも有効です。</p>"],
-  ["結果の確認", "「いくつか見つかったら」の選択肢の違いは？", "<ul><li>最初の1つ：上の行から、左から順に見て最初のもの</li><li>最後の1つ：合計金額のように、一番下にあるものを取りたいとき</li><li>○番目：決まった順番のもの</li><li>すべて：見つかったものを全部、スペース区切りで1つのセルに入れます</li></ul>"],
-  ["結果の確認", "取れなかった列はどうなりますか？", "<p>空欄になります。違う値を間違えて入れないようにするためです。画面では赤く表示されるので、コピー前に確認できます。</p>"],
+  ["結果の確認", "「いくつか見つかったら」の選択肢の違いは？", "<ul><li>最初の1つ：上の行から、左から順に見て最初のもの</li><li>最後の1つ：合計金額のように、一番下にあるものを取りたいとき</li><li>○番目：決まった順番のもの</li><li>すべて：見つかったものを全部、スペース区切りで1つの項目にまとめます</li></ul>"],
+  ["結果の確認", "取れなかった項目はどうなりますか？", "<p>空になります。違う値を間違えて入れないようにするためです。画面では赤く表示され、プレビューには「未取得」と出るので、コピー前に確認できます。区切り記号は残るので、<code>A//C</code> のように位置が分かります。</p>"],
 
-  ["列の並び", "「右端の列から」「左端の列から」の違いは？", "<p>列カードを上から設定していくときに、Excelの右端の列から決めるか、左端の列から決めるかの違いです。どちらを選んでも、コピー結果は Excel の A列から順に並びます。各カードの左上に、Excelの何列目になるかが表示されます。</p>"],
-  ["列の並び", "列の順番を入れ替えたい。", "<p>列カードの右上の「↑」「↓」で入れ替えます。「×」で削除します。</p>"],
-  ["列の並び", "空欄の列は何に使いますか？", "<p>Excelの表で、PDFから取らない列（手入力する列など）の位置を空けておくために使います。「＋ 空欄の列を追加」か、カードの「空欄の列に変える」で作れます。</p>"],
-  ["列の並び", "見出しは何に使いますか？", "<p>画面上で列を見分けるための名前です。「見出し行も一緒にコピー」にチェックを入れると、Excelの1行目に見出しも貼り付けられます。</p>"],
+  ["アウトプットの形", "Excelにはどんな形で貼り付けられますか？", "<p>標準は<b>1つのセルにまとめる</b>形です。すべての項目を区切り記号でつないだ文字が、A1セル1つに入ります。例：区切り記号が「/」なら <code>INV-2026-0142/2026年10月15日/株式会社 青葉精機</code></p>"],
+  ["アウトプットの形", "区切り記号には何が使えますか？", "<p>好きな文字を入れられます（最大20文字）。「/」「・」「-」「、」などはボタンでも選べます。「 / 」のように空白を含めたり、「＞＞」のように2文字以上にしたりもできます。タブと改行は使えません。</p>"],
+  ["アウトプットの形", "区切り記号を空欄にするとどうなりますか？", "<p>項目と項目の間に何も入れず、すき間なく続けて並べます。例：<code>INV-2026-01422026年10月15日</code>。プレビューでは、どこからどこまでがどの項目かを色の下線で確認できます。</p>"],
+  ["アウトプットの形", "「空の項目は、区切り記号ごと省く」とは？", "<p>取れなかった項目や空欄の項目を、区切り記号と一緒に取り除く設定です。</p><ul><li>オフ（標準）：<code>A//C</code>（位置がずれない）</li><li>オン：<code>A/C</code>（詰めて並べる）</li></ul><p>後でExcelの「区切り位置」で分ける予定なら、オフのままにしてください。</p>"],
+  ["アウトプットの形", "「アウトプットの右端から」「左端から」の違いは？", "<p>項目カードを上から設定していくとき、アウトプットの右端から決めるか、左端から決めるかの違いです。「右端から」の場合、一番上のカードがアウトプットの一番右（最後）になります。各カードの左上の番号が、アウトプットの何番目かを表します。</p>"],
+  ["アウトプットの形", "項目の順番を入れ替えたい。", "<p>項目カードの右上の「↑」「↓」で入れ替えます。「×」で削除します。結果は下のプレビューにすぐ反映されます。</p>"],
+  ["アウトプットの形", "空欄の項目は何に使いますか？", "<p>あとで手入力する部分など、PDFから取らない項目の位置を空けておくために使います。区切り記号が「/」なら <code>A//C</code> のように位置だけが残ります。「＋ 空欄の項目を追加」か、カードの「空欄の項目に変える」で作れます。</p>"],
+  ["アウトプットの形", "以前のように列ごとに分けて貼り付けたい。", "<p>「貼り付け方」を「列ごとに分ける（A1・B1・C1…）」に変えてください。項目ごとに別のセルに入ります。この設定もPDFの種類ごとに保存されます。</p>"],
+  ["アウトプットの形", "見出しは何に使いますか？", "<p>画面上で項目を見分けるための名前です。「見出し行も一緒にコピー」にチェックを入れると、1つのセルにまとめる場合は見出しを区切り記号でつないだものがA1、値がA2に入ります。</p>"],
 
-  ["コピーとExcel", "Excelにどうやって貼り付けますか？", "<ul><li>「コピー（Excelに貼り付け用）」を押します。</li><li>Excelで貼り付けたいセルを選び、<kbd>Ctrl</kbd>＋<kbd>V</kbd> を押します。</li><li>列ごとに別々のセルに入ります。</li></ul>"],
-  ["コピーとExcel", "貼り付けると1つのセルに全部入ってしまいます。", "<p>Excelの「テキストファイルウィザード」や「区切り位置」の設定が残っていると、そうなることがあります。いったん Excel を閉じて開き直すか、貼り付け先のセルを選んでから「形式を選択して貼り付け」→「テキスト」を試してください。</p>"],
-  ["コピーとExcel", "「文字のまま貼る」は何ですか？", "<p>Excelが勝手に数字や日付に変換しないようにする設定です。0012 の先頭の 0 が消えたり、1-2 が日付になったりするのを防ぎます。金額を計算に使いたいときは、チェックを外して貼り付けてください。</p>"],
+  ["コピーとExcel", "Excelにどうやって貼り付けますか？", "<ul><li>「コピー（Excelに貼り付け用）」を押します。</li><li>Excelで貼り付けたいセル（例：A1）を選び、<kbd>Ctrl</kbd>＋<kbd>V</kbd> を押します。</li><li>1つのセルにまとめる場合は、選んだセル1つに全部入ります。</li></ul>"],
+  ["コピーとExcel", "貼り付けると、セルが分かれてしまいます。", "<p>「貼り付け方」が「列ごとに分ける」になっていないか確認してください。区切り記号に「,」を使ったときに分かれる場合は、Excelの「区切り位置」の設定が残っている可能性があります。いったんExcelを閉じて開き直してください。</p>"],
+  ["コピーとExcel", "あとでExcel側で分けたいときは？", "<p>A列を選び、Excelの「データ」→「区切り位置」で、区切り記号に同じ記号（例：/）を指定すると、列ごとに分けられます。そのため、値の中に出てこない記号を区切り記号に選ぶのがおすすめです。</p>"],
+  ["コピーとExcel", "「文字のまま貼る」は何ですか？", "<p>Excelが勝手に数字や日付に変換しないようにする設定です。0012 の先頭の 0 が消えたり、1-2 が日付になったり、「-」で始まる文字が数式扱いになったりするのを防ぎます。通常はオンのままにしてください。</p>"],
   ["コピーとExcel", "「自動コピーが使えない環境です」と出ました。", "<p>ブラウザの設定でクリップボードの利用が止められています。下に出た枠の文字が選択されているので、そのまま <kbd>Ctrl</kbd>＋<kbd>C</kbd> でコピーし、Excelに貼り付けてください。</p>"],
-  ["コピーとExcel", "Googleスプレッドシートにも貼り付けられますか？", "<p>貼り付けられます。Excelと同じく、列ごとにセルが分かれます。</p>"],
+  ["コピーとExcel", "値の中の改行やタブはどうなりますか？", "<p>セルが崩れないよう、空白1つに置き換えてからコピーします。</p>"],
+  ["コピーとExcel", "Googleスプレッドシートにも貼り付けられますか？", "<p>貼り付けられます。Excelと同じ形で入ります。</p>"],
 
-  ["保存と共有", "設定はどこに保存されますか？", "<p>お使いのパソコンの<b>このブラウザの中だけ</b>に保存されます。PDFや拾った文字は保存されず、範囲・規則・列の順番などの設定だけが残ります。</p>"],
-  ["保存と共有", "保存した設定が消えてしまいました。", "<ul><li>別のブラウザや別のパソコンで開いていないか確認してください。</li><li>ブラウザの履歴やサイトデータを消すと、設定も消えます。</li><li>プライベートウィンドウ（シークレットモード）では保存されません。</li></ul><p>大事な設定は、画面下の「設定を別のPCへ移す」から書き出して控えておくと安心です。</p>"],
+  ["保存と共有", "設定はどこに保存されますか？", "<p>お使いのパソコンの<b>このブラウザの中だけ</b>に保存されます。PDFや拾った文字は保存されず、範囲・規則・項目の順番・区切り記号などの設定だけが残ります。</p>"],
+  ["保存と共有", "ウィンドウを閉じたら、また設定し直しですか？", "<p>いいえ。「保存」を押した設定は、閉じても残ります。次に<b>同じブラウザで同じHTMLファイル</b>を開くと、最後に使った設定が自動で開きます。デスクトップなど決まった場所に置いたファイルから開くようにしてください。</p>"],
+  ["保存と共有", "保存した設定が消えてしまいました。", "<ul><li>別のブラウザや別のパソコン、別の場所のファイルから開いていないか確認してください。</li><li>ブラウザの履歴やサイトデータを消すと、設定も消えます。</li><li>プライベートウィンドウ（シークレットモード）では保存されません。</li></ul><p>大事な設定は、画面下の「設定を別のPCへ移す」から書き出して控えておくと安心です。</p>"],
+  ["保存と共有", "新しい版のHTMLに差し替えたら、設定は消えますか？", "<p>同じブラウザで、同じ場所・同じ名前のファイルに置き換えれば残ります。念のため、差し替える前に設定を書き出しておいてください。</p>"],
   ["保存と共有", "ほかの人に設定を渡したい。", "<ul><li>画面下の「設定を別のPCへ移す」を開きます。</li><li>「保存済みの設定をすべて表示」→「表示した内容をコピー」を押します。</li><li>相手に渡し、相手の画面で同じ枠に貼り付けて「貼り付けた内容を読み込む」を押してもらいます。</li></ul>"],
   ["保存と共有", "読み込むと、今ある設定はどうなりますか？", "<p>名前が同じ設定は、読み込んだ内容で上書きされます。名前が違う設定はそのまま残ります。</p>"],
   ["保存と共有", "似た設定を作りたい。", "<p>もとにする設定を開いて「複製」を押すと、「○○ のコピー」という名前で新しく作れます。名前を変えて「保存」してください。</p>"],
@@ -1142,3 +1269,6 @@ let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTime
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (page.source === "sample"){ page.items = buildSampleItems(); refreshAll(); } });
 })();
 </script>
+
+</body>
+</html>
