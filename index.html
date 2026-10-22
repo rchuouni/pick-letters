@@ -201,6 +201,24 @@ textarea{min-height:110px;font-family:var(--f-mono);font-size:12px}
 .parts li .pv{font-family:var(--f-mono);overflow-wrap:anywhere;min-width:0}
 .parts li.nomatch .pv,.parts li.unset .pv{color:var(--warn)}
 .parts li.blank .pv{color:var(--idle)}
+.rotlabel{font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.rotlabel.on{color:var(--accent);font-weight:700}
+.takerow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.takerow select{width:auto}
+.takerow input[type=number]{width:76px;text-align:center;font-family:var(--f-mono)}
+.takerow .stepbtn{padding:4px 12px;font-weight:700;font-family:var(--f-mono)}
+.takeprev{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywhere;line-height:1.7}
+.takeprev mark{background:color-mix(in srgb,var(--c) 26%,transparent);color:var(--ink);border-radius:2px;padding:0 1px}
+.takeprev .rest{color:var(--muted)}
+.takeprev .cnt{font-family:var(--f-ui);color:var(--muted);margin-left:6px}
+.unitbox{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;border-top:1px dashed var(--line);padding-top:7px}
+.unitbox legend{padding:0;margin-bottom:4px}
+.radios{display:flex;gap:4px 14px;flex-wrap:wrap;align-items:center}
+.radios .check{font-size:13px}
+input[type=text].unittext{width:120px}
+.fixedbox{display:flex;flex-direction:column;gap:6px}
+.part.fixed{border-bottom-style:dotted}
+.parts li.fixed .pv{color:var(--ink)}
 .topright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .faqbtn{display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .faqbtn .q{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-family:var(--f-mono)}
@@ -305,6 +323,8 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
         </div>
         <button id="zWidth">幅に合わせる</button>
         <button id="zPage">全体を表示</button>
+        <button id="btnRot" title="ページを右（時計回り）に90°回します。向きはこの設定に保存されます">↻ 右に90°回す</button>
+        <span class="rotlabel" id="rotLabel" aria-live="polite"></span>
         <span class="sep"></span>
         <input type="file" id="pdfFile" accept="application/pdf" hidden>
         <button id="btnPick">見本PDFを選ぶ</button>
@@ -329,7 +349,7 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
       <div class="slotlist" id="slotlist"></div>
       <div class="addrow">
         <button id="btnAddExtract">＋ 抜き出す項目を追加</button>
-        <button id="btnAddBlank">＋ 空欄の項目を追加</button>
+        <button id="btnAddBlank">＋ 入力した文字の項目を追加</button>
       </div>
     </section>
   </div>
@@ -394,6 +414,7 @@ const DATEFMTS = {
   compact:"20260105", kanji:"2026年1月5日", kanji0:"2026年01月05日", wareki:"令和8年1月5日（和暦）"
 };
 const NUMFMTS = {asis:"そのまま", comma:"カンマを付ける（1,234,567）", plain:"カンマを外す（1234567）"};
+const UNITS = [["","付けない"],["円","円"],["US$","US$"],["RMB","RMB"],["other","その他"]];
 const PICKS = {first:"最初の1つ", last:"最後の1つ", nth:"○番目", all:"すべて（スペース区切り）"};
 
 /* ---------- 架空のサンプル帳票 ---------- */
@@ -429,7 +450,7 @@ function samplePreset(){
       mk({label:"支払期限",region:{x:.07,y:.548,w:.42,h:.028},pattern:"date",dateFmt:"slash0",keyword:"お支払期限",side:"right"}),
       mk({label:"合計金額",region:{x:.62,y:.440,w:.35,h:.072},pattern:"money",numFmt:"plain",pick:"last"}),
       mk({label:"品番",region:{x:.36,y:.352,w:.16,h:.068},pattern:"other",tpl:"αα-ββββ",pick:"all"}),
-      mk({label:"（空欄）",type:"blank"}),
+      mk({label:"区分",type:"blank",text:"仕入"}),
       mk({label:"取引先",region:{x:.07,y:.172,w:.46,h:.03},pattern:"custom",custom:".+?(?=\\s*御中)"}),
       mk({label:"発行日",region:{x:.74,y:.145,w:.23,h:.026},pattern:"date"}),
       mk({label:"請求番号",region:{x:.74,y:.123,w:.23,h:.024},pattern:"other",tpl:"ααα-ββββ-ββββ"})
@@ -438,13 +459,13 @@ function samplePreset(){
 }
 let uid = 1;
 function mk(o){
-  return Object.assign({id:"s"+(uid++),label:"",type:"extract",region:null,pattern:"line",tpl:"",custom:"",keyword:"",side:"right",pick:"first",nth:2,dateFmt:"asis",numFmt:"asis",dropDec:false}, o||{});
+  return Object.assign({id:"s"+(uid++),label:"",type:"extract",region:null,pattern:"line",tpl:"",custom:"",keyword:"",side:"right",pick:"first",nth:2,dateFmt:"asis",numFmt:"asis",dropDec:false,take:0,takeFrom:"left",noSpace:false,unit:"",unitText:"",unitPos:"after",text:""}, o||{});
 }
 
 /* ---------- 状態 ---------- */
 let store = loadStore();
 let cur = null, activeId = null;
-let page = {items:[], aspect:PAGE_H/PAGE_W, source:"sample", pdfPage:null, bg:null, bgW:0};
+let page = {items0:[], aspect0:PAGE_H/PAGE_W, items:[], aspect:PAGE_H/PAGE_W, source:"sample", pdfPage:null, bg:null, bgW:0};
 let zoom = 1;
 
 function loadStore(){
@@ -461,16 +482,22 @@ function hydrate(p){
   c.mode = c.mode === "multi" ? "multi" : "single";
   c.sep = typeof c.sep === "string" ? c.sep.replace(/[\t\r\n]/g, "") : "";
   c.skipEmpty = !!c.skipEmpty;
+  c.rot = [0, 90, 180, 270].includes(+c.rot) ? +c.rot : 0;
   c.slots = (c.slots||[]).map(s => { const o = Object.assign({}, s); delete o.id; if (!PATTERNS[o.pattern]) delete o.pattern;
-    if (!DATEFMTS[o.dateFmt]) delete o.dateFmt; if (!NUMFMTS[o.numFmt]) delete o.numFmt; o.dropDec = !!o.dropDec; return mk(o); });
+    if (!DATEFMTS[o.dateFmt]) delete o.dateFmt; if (!NUMFMTS[o.numFmt]) delete o.numFmt; o.dropDec = !!o.dropDec;
+    o.take = Math.max(0, parseInt(o.take, 10) || 0); if (o.takeFrom !== "right") o.takeFrom = "left"; o.noSpace = !!o.noSpace;
+    if (!UNITS.some(u => u[0] === o.unit)) o.unit = ""; if (o.unitPos !== "before") o.unitPos = "after";
+    if (typeof o.text !== "string") o.text = ""; if (typeof o.unitText !== "string") o.unitText = "";
+    return mk(o); });
   if (rtl) c.slots.reverse();   // 以前の「右端から」設定は、1番目が先頭に来るよう並べ直す
   c.slots.forEach((s, i) => { if (typeof s.ci !== "number") s.ci = i; });
   return c;
 }
 function strip(p){
-  return {name:p.name, direction:"ltr", mode:p.mode, sep:p.sep, skipEmpty:p.skipEmpty, slots:p.slots.map(s => {
+  return {name:p.name, direction:"ltr", mode:p.mode, sep:p.sep, skipEmpty:p.skipEmpty, rot:p.rot || 0, slots:p.slots.map(s => {
     const o = {label:s.label, type:s.type, ci:s.ci};
-    if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth,dateFmt:s.dateFmt,numFmt:s.numFmt,dropDec:s.dropDec});
+    if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth,dateFmt:s.dateFmt,numFmt:s.numFmt,dropDec:s.dropDec,take:s.take,takeFrom:s.takeFrom,noSpace:s.noSpace,unit:s.unit,unitText:s.unitText,unitPos:s.unitPos});
+    else o.text = s.text || "";
     return o; })};
 }
 const slotById = id => cur.slots.find(s => s.id === id);
@@ -490,9 +517,21 @@ function buildSampleItems(){
     return {str:t.s, x:t.x/PAGE_W, y:t.y/PAGE_H, w:w/PAGE_W, h:t.z/PAGE_H, z:t.z, b:t.b};
   });
 }
+/* 向き：items0（元の向き）を、設定の回転角に合わせて items に直す */
+function rotOf(){ return cur ? cur.rot || 0 : 0; }
+function rot90(r){ return {x:1 - r.y - r.h, y:r.x, w:r.h, h:r.w}; }
+function rotBox(r, deg){ for (let k = 0; k < (deg / 90) % 4; k++) r = rot90(r); return r; }
+function applyRot(){
+  const deg = rotOf();
+  page.items = page.items0.map(it => Object.assign({}, it, rotBox({x:it.x, y:it.y, w:it.w, h:it.h}, deg)));
+  page.aspect = deg % 180 ? 1 / page.aspect0 : page.aspect0;
+  const l = document.getElementById("rotLabel");
+  l.textContent = deg ? `${deg}° 回転中` : ""; l.classList.toggle("on", !!deg);
+}
 function setNote(t){ document.getElementById("srcNote").textContent = t; }
 function useSample(){
-  page = {items:buildSampleItems(), aspect:PAGE_H/PAGE_W, source:"sample", pdfPage:null, bg:null, bgW:0};
+  page = {items0:buildSampleItems(), aspect0:PAGE_H/PAGE_W, items:[], aspect:1, source:"sample", pdfPage:null, bg:null, bgW:0};
+  applyRot();
   setNote("架空のサンプル請求書を表示しています。手元のPDFをこの枠にドロップすると、1ページ目に差し替わります。PDFも文字も保存しません。");
   zoom = 1; layoutPage(false); viewer.scrollTo(0,0); refreshSide();
 }
@@ -508,11 +547,16 @@ async function loadPdf(file){
     const items = [];
     for (const it of tc.items){
       if (!it.str || !it.str.trim()) continue;
-      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
-      const fh = Math.hypot(tx[2], tx[3]) || 10;
-      items.push({str:it.str, x:tx[4]/vp.width, y:(tx[5]-fh)/vp.height, w:it.width/vp.width, h:fh/vp.height});
+      // 文字の向きに関係なく、文字のかたまりを囲む四角を求める
+      const [a, b, c, d, e, f] = it.transform, len = Math.hypot(a, b) || 1;
+      const ux = a / len * it.width, uy = b / len * it.width;
+      const pts = [[e, f], [e + ux, f + uy], [e + c, f + d], [e + ux + c, f + uy + d]].map(([x, y]) => vp.convertToViewportPoint(x, y));
+      const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      items.push({str:it.str, x:x0/vp.width, y:y0/vp.height, w:Math.max(x1 - x0, 1)/vp.width, h:Math.max(y1 - y0, 1)/vp.height});
     }
-    page = {items, aspect:vp.height/vp.width, source:"pdf", pdfPage:pg, bg:null, bgW:0};
+    page = {items0:items, aspect0:vp.height/vp.width, items:[], aspect:1, source:"pdf", pdfPage:pg, bg:null, bgW:0};
+    applyRot();
     let n = `見本PDF：${file.name}（1ページ目・文字のかたまり ${items.length} 個）。このPDFは保存されません。`;
     if (doc.numPages > 1) n += ` 2ページ目以降は使いません（全 ${doc.numPages} ページ）。`;
     if (!items.length) n += " 文字が見つかりませんでした。画像だけのPDFの可能性があります。";
@@ -527,7 +571,7 @@ function schedulePdfRender(){
   if (page.source !== "pdf" || !page.pdfPage) return;
   clearTimeout(bgTimer);
   bgTimer = setTimeout(async () => {
-    const want = Math.min(4096, cv.width);
+    const want = Math.min(4096, rotOf() % 180 ? cv.height : cv.width);
     if (page.bg && page.bgW >= want * 0.92) return;
     const job = ++bgJob, pg = page.pdfPage;
     const base = pg.getViewport({scale:1});
@@ -567,6 +611,12 @@ function stepZoom(dir){
 }
 document.getElementById("zIn").onclick = () => stepZoom(1);
 document.getElementById("zOut").onclick = () => stepZoom(-1);
+document.getElementById("btnRot").onclick = () => {
+  cur.rot = (rotOf() + 90) % 360;
+  cur.slots.forEach(s => { if (s.region) s.region = roundR(rot90(s.region)); });   // 範囲もページと一緒に回す
+  page.bg = page.source === "pdf" ? page.bg : null;
+  applyRot(); changed(); layoutPage(false); viewer.scrollTo(0, 0); refreshSide();
+};
 document.getElementById("zWidth").onclick = () => { zoom = 1; layoutPage(true); };
 document.getElementById("zPage").onclick = () => {
   zoom = Math.max(0.3, Math.min(1, (viewer.clientHeight - 32) / (baseWidth() * page.aspect)));
@@ -664,10 +714,30 @@ function fmtNum(v, f, drop){
   if (f === "comma") ip = ip.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return (neg ? "-" : "") + ip + (fp !== undefined ? "." + fp : "");
 }
+function unitOf(slot){ return slot.unit === "other" ? (slot.unitText || "").trim() : (slot.unit || ""); }
 function formatValue(slot, v){
   if (slot.pattern === "date") return fmtDate(v, slot.dateFmt);
-  if (slot.pattern === "number" || slot.pattern === "money") return fmtNum(v, slot.numFmt, slot.dropDec);
+  if (slot.pattern === "number" || slot.pattern === "money"){
+    const n = fmtNum(v, slot.numFmt, slot.dropDec), u = unitOf(slot);
+    return u ? (slot.unitPos === "before" ? u + n : n + u) : n;
+  }
   return v;
+}
+const usesTake = slot => slot.pattern === "all" || slot.pattern === "line";
+function takeSrc(slot, v){ return slot.noSpace ? v.replace(/\s+/g, "") : v; }
+function cutChars(slot, v){
+  if (!usesTake(slot) || !(slot.take > 0)) return v;
+  const ch = [...takeSrc(slot, v)];
+  return (slot.takeFrom === "right" ? ch.slice(-slot.take) : ch.slice(0, slot.take)).join("");
+}
+function takePreviewHtml(slot, r){
+  if (!usesTake(slot)) return "";
+  if (!r.raw) return `<span class="rest">範囲の文字が見つかると、ここに取り出す部分が表示されます</span>`;
+  const ch = [...takeSrc(slot, r.raw)], n = slot.take > 0 ? Math.min(slot.take, ch.length) : ch.length;
+  const head = slot.takeFrom === "right" ? ch.slice(0, ch.length - n).join("") : ch.slice(0, n).join("");
+  const tail = slot.takeFrom === "right" ? ch.slice(ch.length - n).join("") : ch.slice(n).join("");
+  const body = slot.takeFrom === "right" ? `<span class="rest">${esc(head)}</span><mark>${esc(tail)}</mark>` : `<mark>${esc(head)}</mark><span class="rest">${esc(tail)}</span>`;
+  return body + `<span class="cnt">（全 ${ch.length} 文字中 ${n} 文字）</span>`;
 }
 
 /* ---------- 抽出 ---------- */
@@ -701,7 +771,7 @@ function matcherFor(slot){
   return {mode:p.mode};
 }
 function extract(slot){
-  if (slot.type === "blank") return {status:"blank", value:"", found:[]};
+  if (slot.type === "blank"){ const t = (slot.text || "").replace(/[\t\r\n]+/g, " "); return {status:t ? "fixed" : "blank", value:t, found:[]}; }
   if (!slot.region) return {status:"unset", value:"", found:[]};
   let texts = linesIn(slot.region);
   const kw = (slot.keyword||"").normalize("NFKC").trim();
@@ -718,13 +788,16 @@ function extract(slot){
   else if (m.mode === "all") found = texts.length ? [texts.join(" ")] : [];
   else for (const t of texts) for (const x of t.matchAll(m.re)) if (x[0].trim()) found.push(x[0].trim());
   found = found.map(v => formatValue(slot, v));
+  const raws = found;
+  found = found.map(v => cutChars(slot, v));
   if (!found.length) return {status:"nomatch", value:"", note: kw ? `範囲内に「${kw}」のある行で、一致する文字がありません` : "範囲内に一致する文字がありません", found};
-  let v;
-  if (slot.pick === "last") v = found[found.length-1];
-  else if (slot.pick === "all") v = found.join(" ");
-  else if (slot.pick === "nth"){ v = found[(slot.nth|0)-1]; if (v === undefined) return {status:"nomatch", value:"", note:`一致は ${found.length} 個しかありません`, found}; }
-  else v = found[0];
-  return {status:"ok", value:v, found};
+  let v, raw;
+  if (slot.pick === "last"){ v = found[found.length-1]; raw = raws[raws.length-1]; }
+  else if (slot.pick === "all"){ v = found.join(" "); raw = raws.join(" "); }
+  else if (slot.pick === "nth"){ v = found[(slot.nth|0)-1]; raw = raws[(slot.nth|0)-1]; if (v === undefined) return {status:"nomatch", value:"", note:`一致は ${found.length} 個しかありません`, found}; }
+  else { v = found[0]; raw = raws[0]; }
+  if (v === "") return {status:"nomatch", value:"", note:"取り出す文字がありません", found, raw};
+  return {status:"ok", value:v, found, raw};
 }
 
 /* ---------- 列の順番・色 ---------- */
@@ -743,15 +816,22 @@ function drawPage(){
   const ctx = cv.getContext("2d");
   ctx.setTransform(k,0,0,k,0,0);
   ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,W,H);
+  // 元の向きで描いてから回す
+  const deg = rotOf(), W0 = deg % 180 ? H : W, H0 = deg % 180 ? W : H;
+  ctx.save();
+  if (deg === 90){ ctx.translate(W, 0); ctx.rotate(Math.PI / 2); }
+  else if (deg === 180){ ctx.translate(W, H); ctx.rotate(Math.PI); }
+  else if (deg === 270){ ctx.translate(0, H); ctx.rotate(-Math.PI / 2); }
   if (page.source === "pdf"){
-    if (page.bg) ctx.drawImage(page.bg, 0, 0, W, H);
+    if (page.bg) ctx.drawImage(page.bg, 0, 0, W0, H0);
   } else {
-    const s = W / PAGE_W;
+    const s = W0 / PAGE_W;
     ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = Math.max(.6, .8*s);
     for (const [x1,y1,x2,y2] of SAMPLE_LINES){ ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.stroke(); }
     ctx.fillStyle = "#1d1d1f"; ctx.textBaseline = "top";
-    for (const it of page.items){ ctx.font = `${it.b?700:400} ${it.z*s}px ${FONT_STACK}`; ctx.fillText(it.str, it.x*W, it.y*H); }
+    for (const it of page.items0){ ctx.font = `${it.b?700:400} ${it.z*s}px ${FONT_STACK}`; ctx.fillText(it.str, it.x*W0, it.y*H0); }
   }
+  ctx.restore();
   const act = activeId && slotById(activeId);
   if (act && act.region){
     ctx.fillStyle = colorOf(act) + "38";
@@ -810,8 +890,11 @@ function renderSlots(){
       </div>`;
     if (s.type === "blank"){
       return `<div class="slot blank" data-id="${id}" style="--c:${c}">${head}
-        <div class="regionrow"><span class="hint">空欄の項目です。文字は入らず、位置だけを確保します。</span>
-        <button data-act="toExtract" class="ghost">抜き出す項目に変える</button></div></div>`;
+        <div class="fixedbox">
+          <div class="field"><label for="${id}-text">アウトプットに入れる文字（PDFからは拾わず、この文字をそのまま入れます）</label>
+            <input type="text" id="${id}-text" data-k="text" value="${esc(s.text)}" placeholder="例：仕入　（空欄なら何も入らず、位置だけを確保します）" autocomplete="off"></div>
+        </div>
+        <div class="slotfoot"><button data-act="toExtract" class="ghost">PDFから抜き出す項目に変える</button></div></div>`;
     }
     const isTpl = s.pattern === "other", isCustom = s.pattern === "custom";
     return `<div class="slot${id===activeId?" active":""}" data-id="${id}" style="--c:${c}">${head}
@@ -830,6 +913,29 @@ function renderSlots(){
           <select id="${id}-numFmt" data-k="numFmt">${opts(NUMFMTS, s.numFmt)}</select></div>
         <label class="check"><input type="checkbox" id="${id}-dropDec" data-k="dropDec"${s.dropDec ? " checked" : ""}> 小数点以下を消す（12.5 → 12）</label>
         ${s.pattern === "money" ? `<p class="hint">「そのまま」以外では、¥ や 円 などの記号を外して数字だけにします。</p>` : ""}
+        <fieldset class="unitbox"><legend class="flabel">単位を付ける</legend>
+          <div class="radios">
+            ${UNITS.map(([v, l], k) => `<label class="check"><input type="radio" id="${id}-unit-${k}" name="${id}-unit" data-k="unit" value="${esc(v)}"${s.unit === v ? " checked" : ""}> ${esc(l)}</label>`).join("")}
+            <input type="text" class="unittext" id="${id}-unitText" data-k="unitText" value="${esc(s.unitText)}" placeholder="例：個、kg" aria-label="その他の単位"${s.unit === "other" ? "" : " disabled"}>
+          </div>
+          <div class="radios"${s.unit ? "" : " hidden"}><span class="flabel">付ける位置</span>
+            <label class="check"><input type="radio" id="${id}-unitPos-0" name="${id}-unitPos" data-k="unitPos" value="after"${s.unitPos !== "before" ? " checked" : ""}> 後ろ（1,234${esc(unitOf(s) || "円")}）</label>
+            <label class="check"><input type="radio" id="${id}-unitPos-1" name="${id}-unitPos" data-k="unitPos" value="before"${s.unitPos === "before" ? " checked" : ""}> 前（${esc(unitOf(s) || "US$")}1,234）</label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="fmtbox"${usesTake(s) ? "" : " hidden"}>
+        <span class="flabel">取り出す文字数（0 は全部）</span>
+        <div class="takerow">
+          <select id="${id}-takeFrom" data-k="takeFrom" aria-label="数える向き"><option value="left"${s.takeFrom !== "right" ? " selected" : ""}>左から</option><option value="right"${s.takeFrom === "right" ? " selected" : ""}>右から</option></select>
+          <button class="stepbtn" data-act="takeDec" title="1文字減らす" aria-label="1文字減らす">−</button>
+          <input type="number" min="0" id="${id}-take" data-k="take" value="${s.take}" aria-label="取り出す文字数">
+          <button class="stepbtn" data-act="takeInc" title="1文字増やす" aria-label="1文字増やす">＋</button>
+          <span>文字</span>
+          <button class="ghost" data-act="takeAll">全部にする</button>
+        </div>
+        <label class="check"><input type="checkbox" id="${id}-noSpace" data-k="noSpace"${s.noSpace ? " checked" : ""}> 空白を取り除いてから数える</label>
+        <div class="takeprev" data-takeprev></div>
       </div>
       <div class="tplbox"${isTpl?"":" hidden"}>
         <label class="flabel" for="${id}-tpl">ターゲットの文字の形　α＝英字　β＝数字　γ＝記号　…＝直前の種類が何文字でも</label>
@@ -862,7 +968,7 @@ function renderSlots(){
         </div>
       </details>
       <div class="result" data-result></div>
-      <div class="slotfoot"><button data-act="toBlank" class="ghost">空欄の項目に変える</button></div>
+      <div class="slotfoot"><button data-act="toBlank" class="ghost">入力した文字の項目に変える</button></div>
     </div>`;
   }).join("");
   updateResults();
@@ -874,6 +980,7 @@ function updateResults(){
     const co = card.querySelector("[data-coords]"); if (co) co.textContent = coordsText(s.region);
     const el = card.querySelector("[data-result]"); if (!el) return;
     const r = extract(s);
+    const tp = card.querySelector("[data-takeprev]"); if (tp) tp.innerHTML = takePreviewHtml(s, r);
     const pill = {ok:"取得できた", nomatch:"一致なし", unset:"範囲未設定"}[r.status];
     const txt = r.status === "ok" ? r.value : (r.note || (r.status === "unset" ? "範囲を指定すると、ここに結果が出ます" : ""));
     let html = `<div class="rmain"><span class="pill ${r.status}">${pill}</span><span class="val">${esc(txt)}</span></div>`;
@@ -969,6 +1076,7 @@ function setDirty(v){
 function changed(){ if (!dirty) setDirty(true); }
 function openPreset(p, savedAs){
   cur = hydrate(p); cur.__savedAs = savedAs || null; activeId = null;
+  applyRot(); if (pagebox.offsetWidth) layoutPage(false);
   presetName.value = cur.name || "";
   modeSel.value = cur.mode; sepInput.value = cur.sep; skipEmpty.checked = cur.skipEmpty;
   setDirty(false); refreshAll();
@@ -1024,9 +1132,17 @@ slotlist.addEventListener("input", e => {
   const k = e.target.dataset.k; if (!k || e.target.tagName === "SELECT") return;
   const s = slotById(e.target.closest(".slot").dataset.id);
   if (e.target.type === "checkbox"){ s[k] = e.target.checked; changed(); refreshLive(); return; }
-  s[k] = k === "nth" ? Math.max(1, parseInt(e.target.value, 10) || 1) : e.target.value;
+  if (e.target.type === "radio"){
+    s[k] = e.target.value; changed();
+    const fid = e.target.id; refreshAll();
+    const f = document.getElementById(fid); if (f) f.focus();
+    if (k === "unit" && s.unit === "other"){ const t = document.getElementById(s.id + "-unitText"); if (t) t.focus(); }
+    return;
+  }
+  s[k] = k === "nth" ? Math.max(1, parseInt(e.target.value, 10) || 1) : k === "take" ? Math.max(0, parseInt(e.target.value, 10) || 0) : e.target.value;
   changed();
   if (k === "label"){ drawBoxes(); renderTable(); return; }
+  if (k === "unitText"){ updateResults(); renderTable(); return; }
   if (k === "tpl"){ const h = e.target.closest(".tplbox").querySelector("[data-tplhelp]"); h.innerHTML = tplHelpHtml(s.tpl); }
   refreshLive();
 });
@@ -1062,11 +1178,23 @@ slotlist.addEventListener("click", e => {
   const b = e.target.closest("button[data-act]"); if (!b) return;
   const id = b.closest(".slot").dataset.id;
   const i = cur.slots.findIndex(x => x.id === id), s = cur.slots[i];
+  if (b.dataset.act === "takeDec" || b.dataset.act === "takeInc" || b.dataset.act === "takeAll"){
+    if (b.dataset.act === "takeAll") s.take = 0;
+    else {
+      // 0（全部）から「−」を押したときは、今の文字数から1文字減らす
+      const total = (() => { const r = extract(Object.assign({}, s, {take:0})); return r.raw ? [...takeSrc(s, r.raw)].length : 0; })();
+      const curN = s.take > 0 ? s.take : total;
+      s.take = Math.max(0, curN + (b.dataset.act === "takeInc" ? 1 : -1));
+      if (total && s.take >= total) s.take = 0;
+    }
+    const inp = document.getElementById(s.id + "-take"); if (inp) inp.value = s.take;
+    changed(); refreshLive(); return;
+  }
   switch (b.dataset.act){
     case "del": cur.slots.splice(i, 1); if (activeId === id) activeId = null; break;
     case "draw": setActive(activeId === id ? null : id, {scrollPage:true}); return;
-    case "toBlank": s.type = "blank"; if (!s.label) s.label = "（空欄）"; if (activeId === id) activeId = null; break;
-    case "toExtract": s.type = "extract"; if (s.label === "（空欄）") s.label = ""; break;
+    case "toBlank": s.type = "blank"; if (!s.label) s.label = "（入力）"; if (activeId === id) activeId = null; break;
+    case "toExtract": s.type = "extract"; if (s.label === "（空欄）" || s.label === "（入力）") s.label = ""; break;
   }
   changed(); refreshAll();
 });
@@ -1087,7 +1215,10 @@ document.getElementById("btnAddExtract").onclick = () => {
   const s = mk({ci:nextCi()}); cur.slots.push(s); changed(); setActive(s.id, {scrollCard:true});
   const inp = document.getElementById(s.id + "-label"); if (inp) inp.focus({preventScroll:true});
 };
-document.getElementById("btnAddBlank").onclick = () => { cur.slots.push(mk({type:"blank", label:"（空欄）", ci:nextCi()})); changed(); refreshAll(); };
+document.getElementById("btnAddBlank").onclick = () => {
+  const s = mk({type:"blank", label:"（入力）", ci:nextCi()}); cur.slots.push(s); changed(); refreshAll();
+  const t = document.getElementById(s.id + "-text"); if (t){ t.scrollIntoView({block:"nearest"}); t.focus({preventScroll:true}); }
+};
 
 /* ---------- 項目のドラッグ並べ替え ---------- */
 let sdrag = null;
@@ -1306,10 +1437,12 @@ const FAQ = [
   ["PDF", "パスワード付きのPDFは使えますか？", "<p>開けません。パスワードを外したPDFを用意してください。</p>"],
   ["PDF", "読み込んだPDFはどこかに保存されますか？", "<p>保存されません。ページを閉じたり再読み込みしたりすると消えます。サーバーに送られることもありません。</p>"],
   ["PDF", "見本PDFを差し替えると、設定は消えますか？", "<p>消えません。範囲はページの大きさに対する割合で覚えているので、同じ種類のPDFに差し替えても同じ場所を指します。結果がその場で新しいPDFの内容に変わるので、別の月の請求書で確認するのにも使えます。</p>"],
+  ["PDF", "PDFが横向き・逆さまで表示されます。", "<p>見本PDFの上の「↻ 右に90°回す」を押すと、時計回りに90°ずつ回ります。正しい向きになるまで押してください。指定済みの範囲も一緒に回るので、引き直す必要はありません。</p>"],
+  ["PDF", "回した向きは覚えていますか？", "<p>はい。向きはPDFの種類ごとの設定として保存されます。同じ種類のPDFは、毎回その向きで読み取ります。向きを変えたら「保存」を押してください。</p>"],
   ["PDF", "用紙サイズが違うPDFでも同じ場所を拾えますか？", "<p>範囲はページの幅・高さに対する割合で覚えているので、A4とレターのように少し違う程度なら同じ場所を指します。ただし、レイアウト自体が違う帳票では、別の設定を作ってください。</p>"],
 
   ["範囲の指定", "範囲はどうやって指定しますか？", "<ul><li>項目カードの余白をダブルクリックします（または「範囲を指定する」ボタン）。</li><li>左のページ上をドラッグして、拾いたい場所を囲みます。</li><li>終わったら <kbd>Esc</kbd> か「指定を終える」を押します。</li></ul>"],
-  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（結果が表示されているあたり）をダブルクリックしてください。上の「Excelに貼り付けたときの形」の項目をダブルクリックしても入れます。空欄の項目は範囲を持たないので、指定に入りません。</p>"],
+  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（結果が表示されているあたり）をダブルクリックしてください。上の「Excelに貼り付けたときの形」の項目をダブルクリックしても入れます。入力した文字の項目は範囲を持たないので、指定に入りません。</p>"],
   ["範囲の指定", "枠の位置や大きさを直したい。", "<ul><li>枠の中をドラッグすると移動します。</li><li>四隅と辺の小さな四角をドラッグすると大きさが変わります。</li><li>矢印キーで少しずつ移動、<kbd>Shift</kbd>＋矢印キーで少しずつ大きさを変えられます。</li><li>枠の外をドラッグすると、最初から引き直せます。</li></ul>"],
   ["範囲の指定", "細かい場所がうまく囲めません。", "<p>「＋」で拡大してから囲んでください。<kbd>Ctrl</kbd>を押しながらマウスホイールを回しても拡大・縮小できます。「幅に合わせる」「全体を表示」で元の大きさに戻せます。</p>"],
   ["範囲の指定", "どこまで囲めば、その文字が範囲に入りますか？", "<p>文字のかたまりの<b>中心</b>が枠の中にあれば、範囲に入ったと判定します。範囲指定中は、範囲に入った文字が薄く色付きで表示されるので、それを目安にしてください。</p>"],
@@ -1329,8 +1462,12 @@ const FAQ = [
   ["日付・数字の書き方", "存在しない日付はどうなりますか？", "<p>2026/2/30 のようなありえない日付は、書き方を直さずにそのまま出します。PDFの値を確認してください。</p>"],
   ["日付・数字の書き方", "数字にカンマを付けたり外したりできますか？", "<p>「拾う文字の規則」で「数字」（または「金額」）を選ぶと、「数字の書き方」が出ます。</p><ul><li>カンマを付ける：1234567 → 1,234,567</li><li>カンマを外す：1,234,567 → 1234567</li><li>そのまま：PDFの書き方のまま</li></ul>"],
   ["日付・数字の書き方", "小数点以下を消したい。", "<p>「小数点以下を消す」にチェックを入れます。12.5 → 12、1,234.56 → 1,234 のように、小数点より後ろを切り捨てます（四捨五入はしません）。</p>"],
+  ["日付・数字の書き方", "数字に単位を付けたい。", "<p>「数字」か「金額」を選ぶと、「単位を付ける」が出ます。「円」「US$」「RMB」から選ぶか、「その他」を選んで好きな単位（個、kg など）を入力します。標準では数字の後ろに付きます（1,234円）。「付ける位置」で前（US$1,234）にもできます。</p>"],
   ["日付・数字の書き方", "金額の ¥ や 円 を外したい。", "<p>「金額」を選び、「金額の書き方」を「カンマを付ける」か「カンマを外す」にすると、¥ や 円 を外して数字だけにします。「そのまま」なら記号も残ります。</p>"],
   ["日付・数字の書き方", "「カンマを付ける」で先頭の0はどうなりますか？", "<p>0012 のような先頭の0は外れて 12 になります。番号として先頭の0を残したい場合は、「そのまま」か「カンマを外す」を選んでください。</p>"],
+  ["拾う文字の規則", "拾った文字の先頭から何文字かだけ使いたい。", "<p>「範囲内の文字すべて」か「範囲内の1行ずつ」を選ぶと、「取り出す文字数」が出ます。「−」「＋」か数字の入力で文字数を決めます。例：「みずほ銀行大阪支店」で 5 にすると「みずほ銀行」になります。取り出す部分は色付きで表示されます。</p>"],
+  ["拾う文字の規則", "後ろから何文字かだけ使いたい。", "<p>「取り出す文字数」の「左から」を「右から」に変えます。例：口座番号の下4桁だけ、など。</p>"],
+  ["拾う文字の規則", "文字数を数えるとき、空白はどうなりますか？", "<p>標準では空白も1文字として数えます。「空白を取り除いてから数える」にチェックを入れると、空白を詰めてから数え、アウトプットも空白なしになります。0 にすると全部を使います。</p>"],
   ["拾う文字の規則", "「目印の言葉で絞り込む」はどう使いますか？", "<p>範囲の中で、目印の言葉がある行だけを対象にします。「目印から見て右側の文字」を選ぶと、その言葉より右にある文字から拾います。例：目印「お支払期限」＋右側＋日付 → 支払期限の日付だけを拾います。</p>"],
   ["拾う文字の規則", "正規表現は使えますか？", "<p>「正規表現（上級者向け）」を選ぶと直接入力できます。普段は「その他」で十分です。</p>"],
 
@@ -1342,11 +1479,12 @@ const FAQ = [
   ["アウトプットの形", "Excelにはどんな形で貼り付けられますか？", "<p>標準は<b>1つのセルにまとめる</b>形です。すべての項目を区切り記号でつないだ文字が、A1セル1つに入ります。例：区切り記号が「/」なら <code>INV-2026-0142/2026年10月15日/株式会社 青葉精機</code></p>"],
   ["アウトプットの形", "区切り記号には何が使えますか？", "<p>好きな文字を入れられます（最大20文字）。「/」「・」「-」「、」などはボタンでも選べます。「 / 」のように空白を含めたり、「＞＞」のように2文字以上にしたりもできます。タブと改行は使えません。</p>"],
   ["アウトプットの形", "区切り記号を空欄にするとどうなりますか？", "<p>項目と項目の間に何も入れず、すき間なく続けて並べます。例：<code>INV-2026-01422026年10月15日</code>。プレビューでは、どこからどこまでがどの項目かを色の下線で確認できます。</p>"],
-  ["アウトプットの形", "「空の項目は、区切り記号ごと省く」とは？", "<p>取れなかった項目や空欄の項目を、区切り記号と一緒に取り除く設定です。</p><ul><li>オフ（標準）：<code>A//C</code>（位置がずれない）</li><li>オン：<code>A/C</code>（詰めて並べる）</li></ul><p>後でExcelの「区切り位置」で分ける予定なら、オフのままにしてください。</p>"],
+  ["アウトプットの形", "「空の項目は、区切り記号ごと省く」とは？", "<p>取れなかった項目や、文字が空の項目を、区切り記号と一緒に取り除く設定です。</p><ul><li>オフ（標準）：<code>A//C</code>（位置がずれない）</li><li>オン：<code>A/C</code>（詰めて並べる）</li></ul><p>後でExcelの「区切り位置」で分ける予定なら、オフのままにしてください。</p>"],
   ["アウトプットの形", "項目の順番はどう決まりますか？", "<p>項目カードの<b>一番上が1番目</b>で、アウトプットの先頭（一番左）になります。下にいくほど後ろに並びます。各カードの左上の番号が、アウトプットの何番目かを表します。</p>"],
   ["アウトプットの形", "項目の順番を入れ替えたい。", "<p>項目カードの左上の <b>⠿</b> をつかんで、上下にドラッグします。ドラッグ中はカードが小さくたたまれ、番号はすぐに付け直されます。キーボードでは ⠿ を選んで <kbd>↑</kbd><kbd>↓</kbd> キーで動かせます。「×」で削除します。</p>"],
   ["アウトプットの形", "以前「右端から」で作った設定はどうなりますか？", "<p>開いたときに、1番目が一番上に来るよう自動で並べ直します。アウトプットの中身や順番は変わりません。</p>"],
-  ["アウトプットの形", "空欄の項目は何に使いますか？", "<p>あとで手入力する部分など、PDFから取らない項目の位置を空けておくために使います。区切り記号が「/」なら <code>A//C</code> のように位置だけが残ります。「＋ 空欄の項目を追加」か、カードの「空欄の項目に変える」で作れます。</p>"],
+  ["アウトプットの形", "PDFにない決まった文字を入れたい。", "<p>「＋ 入力した文字の項目を追加」で項目を作り、「アウトプットに入れる文字」に入力します。PDFからは拾わず、入力した文字がそのままアウトプットに入ります。例：<code>INV-2026-0142/仕入/2026/10/15</code> の「仕入」。既存の項目は「入力した文字の項目に変える」で切り替えられます。</p>"],
+  ["アウトプットの形", "位置だけ空けておきたい。", "<p>「入力した文字の項目」を作り、文字を空欄のままにします。区切り記号が「/」なら <code>A//C</code> のように位置だけが残ります。</p>"],
   ["アウトプットの形", "以前のように列ごとに分けて貼り付けたい。", "<p>「貼り付け方」を「列ごとに分ける（A1・B1・C1…）」に変えてください。項目ごとに別のセルに入ります。この設定もPDFの種類ごとに保存されます。</p>"],
   ["アウトプットの形", "見出しは何に使いますか？", "<p>画面上で項目を見分けるための名前です。「見出し行も一緒にコピー」にチェックを入れると、1つのセルにまとめる場合は見出しを区切り記号でつないだものがA1、値がA2に入ります。</p>"],
 
@@ -1398,13 +1536,13 @@ faqSearch.addEventListener("input", renderFaq);
 faqCats.addEventListener("click", e => { const b = e.target.closest("[data-cat]"); if (!b) return; faqCat = b.dataset.cat; renderFaq(); });
 
 /* ---------- 起動 ---------- */
-page.items = buildSampleItems();
+page.items0 = buildSampleItems();
 setNote("架空のサンプル請求書を表示しています。手元のPDFをこの枠にドロップすると、1ページ目に差し替わります。PDFも文字も保存しません。");
 if (store.last && store.presets[store.last]) openPreset(store.presets[store.last], store.last);
 else openPreset(samplePreset(), null);
 layoutPage(false);
 let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => layoutPage(true), 120); });
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (page.source === "sample"){ page.items = buildSampleItems(); refreshAll(); } });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (page.source === "sample"){ page.items0 = buildSampleItems(); applyRot(); refreshAll(); } });
 })();
 </script>
 
