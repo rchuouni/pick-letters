@@ -107,7 +107,17 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .slot.active{box-shadow:0 0 0 2px var(--c);background:color-mix(in srgb,var(--c) 4%,var(--surface))}
 .slot.blank{border-left-style:dashed;background:var(--surface-2)}
 .slothead{display:flex;gap:8px;align-items:center}
-.colno{display:flex;flex-direction:column;line-height:1.15;white-space:nowrap;min-width:52px}
+.colno{display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:58px}
+.colno .pos{display:flex;flex-direction:column;line-height:1.1}
+.grip{border:0;background:transparent;padding:4px 2px;font-size:18px;line-height:1;color:var(--muted);cursor:grab;touch-action:none;border-radius:4px}
+.grip:hover{color:var(--c);background:var(--surface-2)}
+.grip:active{cursor:grabbing}
+.slotlist.sorting{user-select:none;-webkit-user-select:none}
+.slotlist.sorting .slot > :not(.slothead){display:none}
+.slotlist.sorting .slot{padding-block:6px}
+.slot.dragging{position:relative;z-index:5;box-shadow:0 10px 28px rgba(10,20,35,.25),0 0 0 2px var(--c);cursor:grabbing}
+.fmtbox{display:flex;flex-direction:column;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.fmtbox .check{font-size:13px}
 .colno b{font-size:15px;color:var(--c);font-family:var(--f-mono)}
 .colno span{font-size:10px;color:var(--muted)}
 .slothead input{flex:1 1 auto}
@@ -129,7 +139,7 @@ kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border
 .tplhelp .ex{color:var(--muted);margin-left:4px}
 .tplhelp .err{color:var(--warn)}
 .result{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:8px;min-width:0}
-.result .main{display:flex;gap:8px;align-items:baseline;min-width:0}
+.result .rmain{display:flex;gap:8px;align-items:baseline;min-width:0}
 .result .val{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere;min-width:0}
 .cands{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--muted)}
 .cands button{font-family:var(--f-mono);font-size:11px;padding:1px 7px;border-radius:999px}
@@ -237,13 +247,6 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
       <label for="presetName">PDFの種類名</label>
       <input type="text" id="presetName" placeholder="例：青葉精機 請求書">
     </div>
-    <div class="field">
-      <label for="dirSel">設定する順番</label>
-      <select id="dirSel">
-        <option value="rtl">アウトプットの右端から</option>
-        <option value="ltr">アウトプットの左端から</option>
-      </select>
-    </div>
     <div class="acts">
       <button class="primary" id="btnSave">保存</button>
       <button id="btnNew">新規作成</button>
@@ -252,46 +255,6 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
     </div>
     <span id="saveState" class="state" aria-live="polite"></span>
   </section>
-
-  <div class="main">
-    <section class="panel sticky" aria-label="見本PDF">
-      <div class="toolbar">
-        <h2>見本PDF</h2>
-        <div class="zoom" role="group" aria-label="拡大縮小">
-          <button id="zOut" title="縮小（Ctrl＋ホイールでも可）" aria-label="縮小">−</button>
-          <output id="zLabel">100%</output>
-          <button id="zIn" title="拡大（Ctrl＋ホイールでも可）" aria-label="拡大">＋</button>
-        </div>
-        <button id="zWidth">幅に合わせる</button>
-        <button id="zPage">全体を表示</button>
-        <span class="sep"></span>
-        <input type="file" id="pdfFile" accept="application/pdf" hidden>
-        <button id="btnPick">見本PDFを選ぶ</button>
-        <button class="ghost" id="btnSample">架空サンプル</button>
-      </div>
-      <div id="editbar" class="editbar" hidden></div>
-      <div class="viewer" id="viewer">
-        <div class="pagebox" id="pagebox">
-          <canvas id="cv"></canvas>
-          <div class="overlay" id="overlay"></div>
-        </div>
-      </div>
-      <p class="srcnote" id="srcNote"></p>
-    </section>
-
-    <section class="panel" aria-label="アウトプットの列設定">
-      <div class="panelhead">
-        <h2>アウトプットの項目</h2>
-        <span class="hint" id="slotCount"></span>
-      </div>
-      <p class="hint">項目のカードをダブルクリックすると範囲の指定に入ります。ページ上をドラッグして囲み、枠は動かしたり角を引っぱって大きさを変えたりできます。</p>
-      <div class="slotlist" id="slotlist"></div>
-      <div class="addrow">
-        <button id="btnAddExtract">＋ 抜き出す項目を追加</button>
-        <button id="btnAddBlank">＋ 空欄の項目を追加</button>
-      </div>
-    </section>
-  </div>
 
   <section class="panel" aria-label="Excelに貼り付けたときの形">
     <div class="panelhead">
@@ -330,6 +293,46 @@ dialog.faq::backdrop{background:rgba(10,16,24,.45)}
     </div>
     <textarea id="copyFallback" hidden aria-label="コピー用テキスト"></textarea>
   </section>
+
+  <div class="main">
+    <section class="panel sticky" aria-label="見本PDF">
+      <div class="toolbar">
+        <h2>見本PDF</h2>
+        <div class="zoom" role="group" aria-label="拡大縮小">
+          <button id="zOut" title="縮小（Ctrl＋ホイールでも可）" aria-label="縮小">−</button>
+          <output id="zLabel">100%</output>
+          <button id="zIn" title="拡大（Ctrl＋ホイールでも可）" aria-label="拡大">＋</button>
+        </div>
+        <button id="zWidth">幅に合わせる</button>
+        <button id="zPage">全体を表示</button>
+        <span class="sep"></span>
+        <input type="file" id="pdfFile" accept="application/pdf" hidden>
+        <button id="btnPick">見本PDFを選ぶ</button>
+        <button class="ghost" id="btnSample">架空サンプル</button>
+      </div>
+      <div id="editbar" class="editbar" hidden></div>
+      <div class="viewer" id="viewer">
+        <div class="pagebox" id="pagebox">
+          <canvas id="cv"></canvas>
+          <div class="overlay" id="overlay"></div>
+        </div>
+      </div>
+      <p class="srcnote" id="srcNote"></p>
+    </section>
+
+    <section class="panel" aria-label="アウトプットの列設定">
+      <div class="panelhead">
+        <h2>アウトプットの項目</h2>
+        <span class="hint" id="slotCount"></span>
+      </div>
+      <p class="hint">上から順に 1番目、2番目…です。左の <b>⠿</b> をドラッグすると順番を入れ替えられます。項目のカードをダブルクリックすると範囲の指定に入ります。ページ上をドラッグして囲み、枠は動かしたり角を引っぱって大きさを変えたりできます。</p>
+      <div class="slotlist" id="slotlist"></div>
+      <div class="addrow">
+        <button id="btnAddExtract">＋ 抜き出す項目を追加</button>
+        <button id="btnAddBlank">＋ 空欄の項目を追加</button>
+      </div>
+    </section>
+  </div>
 
   <section class="panel" aria-label="設定の書き出しと読み込み">
     <details class="adv">
@@ -377,7 +380,7 @@ const ZOOMS = [0.5,0.67,0.75,0.9,1,1.25,1.5,1.75,2,2.5,3,4];
 const MIN = 0.004;
 const PATTERNS = {
   other:  {label:"その他（文字の形を α・β・γ で指定）", mode:"tpl"},
-  date:   {label:"日付", re:"\\d{4}\\s*[/\\-.年]\\s*\\d{1,2}\\s*[/\\-.月]\\s*\\d{1,2}\\s*日?"},
+  date:   {label:"日付", re:"(?:令和|平成|昭和)\\s*(?:\\d{1,2}|元)\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日|\\d{4}\\s*[/\\-.年]\\s*\\d{1,2}\\s*[/\\-.月]\\s*\\d{1,2}\\s*日?|(?<!\\d)(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])(?!\\d)"},
   money:  {label:"金額（¥やカンマ付き）", re:"[¥￥]\\s*-?\\d[\\d,]*(?:\\.\\d+)?円?|-?\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?円?|-?\\d+円"},
   number: {label:"数字", re:"-?\\d+(?:[,.]\\d+)*"},
   zip:    {label:"郵便番号", re:"〒?\\s*\\d{3}-\\d{4}"},
@@ -386,6 +389,11 @@ const PATTERNS = {
   all:    {label:"範囲内の文字すべて", mode:"all"},
   custom: {label:"正規表現（上級者向け）", mode:"custom"}
 };
+const DATEFMTS = {
+  asis:"そのまま", slash0:"2026/01/05", slash:"2026/1/5", hyphen0:"2026-01-05", dot0:"2026.01.05",
+  compact:"20260105", kanji:"2026年1月5日", kanji0:"2026年01月05日", wareki:"令和8年1月5日（和暦）"
+};
+const NUMFMTS = {asis:"そのまま", comma:"カンマを付ける（1,234,567）", plain:"カンマを外す（1234567）"};
 const PICKS = {first:"最初の1つ", last:"最後の1つ", nth:"○番目", all:"すべて（スペース区切り）"};
 
 /* ---------- 架空のサンプル帳票 ---------- */
@@ -418,8 +426,8 @@ function samplePreset(){
   return {
     name:"請求書（サンプル）", direction:"rtl", mode:"single", sep:"/", skipEmpty:false,
     slots:[
-      mk({label:"支払期限",region:{x:.07,y:.548,w:.42,h:.028},pattern:"date",keyword:"お支払期限",side:"right"}),
-      mk({label:"合計金額",region:{x:.62,y:.440,w:.35,h:.072},pattern:"money",pick:"last"}),
+      mk({label:"支払期限",region:{x:.07,y:.548,w:.42,h:.028},pattern:"date",dateFmt:"slash0",keyword:"お支払期限",side:"right"}),
+      mk({label:"合計金額",region:{x:.62,y:.440,w:.35,h:.072},pattern:"money",numFmt:"plain",pick:"last"}),
       mk({label:"品番",region:{x:.36,y:.352,w:.16,h:.068},pattern:"other",tpl:"αα-ββββ",pick:"all"}),
       mk({label:"（空欄）",type:"blank"}),
       mk({label:"取引先",region:{x:.07,y:.172,w:.46,h:.03},pattern:"custom",custom:".+?(?=\\s*御中)"}),
@@ -430,7 +438,7 @@ function samplePreset(){
 }
 let uid = 1;
 function mk(o){
-  return Object.assign({id:"s"+(uid++),label:"",type:"extract",region:null,pattern:"line",tpl:"",custom:"",keyword:"",side:"right",pick:"first",nth:2}, o||{});
+  return Object.assign({id:"s"+(uid++),label:"",type:"extract",region:null,pattern:"line",tpl:"",custom:"",keyword:"",side:"right",pick:"first",nth:2,dateFmt:"asis",numFmt:"asis",dropDec:false}, o||{});
 }
 
 /* ---------- 状態 ---------- */
@@ -448,20 +456,25 @@ function loadStore(){
 function saveStore(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); return true; } catch(e){ return false; } }
 function hydrate(p){
   const c = JSON.parse(JSON.stringify(p));
-  c.direction = c.direction === "ltr" ? "ltr" : "rtl";
+  const rtl = c.direction === "rtl";
+  c.direction = "ltr";
   c.mode = c.mode === "multi" ? "multi" : "single";
   c.sep = typeof c.sep === "string" ? c.sep.replace(/[\t\r\n]/g, "") : "";
   c.skipEmpty = !!c.skipEmpty;
-  c.slots = (c.slots||[]).map(s => { const o = Object.assign({}, s); delete o.id; if (!PATTERNS[o.pattern]) delete o.pattern; return mk(o); });
+  c.slots = (c.slots||[]).map(s => { const o = Object.assign({}, s); delete o.id; if (!PATTERNS[o.pattern]) delete o.pattern;
+    if (!DATEFMTS[o.dateFmt]) delete o.dateFmt; if (!NUMFMTS[o.numFmt]) delete o.numFmt; o.dropDec = !!o.dropDec; return mk(o); });
+  if (rtl) c.slots.reverse();   // 以前の「右端から」設定は、1番目が先頭に来るよう並べ直す
+  c.slots.forEach((s, i) => { if (typeof s.ci !== "number") s.ci = i; });
   return c;
 }
 function strip(p){
-  return {name:p.name, direction:p.direction, mode:p.mode, sep:p.sep, skipEmpty:p.skipEmpty, slots:p.slots.map(s => {
-    const o = {label:s.label, type:s.type};
-    if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth});
+  return {name:p.name, direction:"ltr", mode:p.mode, sep:p.sep, skipEmpty:p.skipEmpty, slots:p.slots.map(s => {
+    const o = {label:s.label, type:s.type, ci:s.ci};
+    if (s.type === "extract") Object.assign(o,{region:s.region,pattern:s.pattern,tpl:s.tpl,custom:s.custom,keyword:s.keyword,side:s.side,pick:s.pick,nth:s.nth,dateFmt:s.dateFmt,numFmt:s.numFmt,dropDec:s.dropDec});
     return o; })};
 }
 const slotById = id => cur.slots.find(s => s.id === id);
+function nextCi(){ const used = new Set(cur.slots.map(s => s.ci % COLORS.length)); for (let i = 0; i < COLORS.length; i++) if (!used.has(i)) return i; return cur.slots.reduce((m, s) => Math.max(m, s.ci), -1) + 1; }
 
 /* ---------- 見本ページ ---------- */
 const viewer = document.getElementById("viewer");
@@ -605,6 +618,58 @@ function tplHelpHtml(t){
   return g + `<span class="ex">例：<span class="mono">${esc(c.ex)}</span></span>`;
 }
 
+/* ---------- 日付・数字の書き方 ---------- */
+const ERAS = {"令和":2018, "平成":1988, "昭和":1925};
+function parseDate(v){
+  let y, mo, d, m;
+  if ((m = v.match(/(令和|平成|昭和)\s*(\d{1,2}|元)\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/))) { y = ERAS[m[1]] + (m[2] === "元" ? 1 : +m[2]); mo = +m[3]; d = +m[4]; }
+  else if ((m = v.match(/(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = v.match(/(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else return null;
+  const t = new Date(y, mo - 1, d);
+  if (t.getFullYear() !== y || t.getMonth() !== mo - 1 || t.getDate() !== d) return null;
+  return {y, mo, d};
+}
+function wareki(y, mo, d){
+  const n = y * 10000 + mo * 100 + d;
+  const [era, base] = n >= 20190501 ? ["令和", 2018] : n >= 19890108 ? ["平成", 1988] : n >= 19261225 ? ["昭和", 1925] : [null, 0];
+  if (!era) return `${y}年${mo}月${d}日`;
+  const ny = y - base;
+  return `${era}${ny === 1 ? "元" : ny}年${mo}月${d}日`;
+}
+function fmtDate(v, f){
+  if (!f || f === "asis") return v;
+  const p = parseDate(v); if (!p) return v;
+  const {y, mo, d} = p, z = n => String(n).padStart(2, "0");
+  switch (f){
+    case "slash0": return `${y}/${z(mo)}/${z(d)}`;
+    case "slash": return `${y}/${mo}/${d}`;
+    case "hyphen0": return `${y}-${z(mo)}-${z(d)}`;
+    case "dot0": return `${y}.${z(mo)}.${z(d)}`;
+    case "compact": return `${y}${z(mo)}${z(d)}`;
+    case "kanji": return `${y}年${mo}月${d}日`;
+    case "kanji0": return `${y}年${z(mo)}月${z(d)}日`;
+    case "wareki": return wareki(y, mo, d);
+  }
+  return v;
+}
+function fmtNum(v, f, drop){
+  f = f || "asis";
+  if (f === "asis") return drop ? v.replace(/(\d)\.\d+/g, "$1") : v;
+  const m = v.replace(/\s+/g, "").match(/-?\d[\d,]*(?:\.\d+)?/); if (!m) return v;
+  let t = m[0]; const neg = t.startsWith("-");
+  t = t.replace(/^-/, "").replace(/,/g, "");
+  let [ip, fp] = t.split(".");
+  if (drop) fp = undefined;
+  if (f === "comma") ip = ip.replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (neg ? "-" : "") + ip + (fp !== undefined ? "." + fp : "");
+}
+function formatValue(slot, v){
+  if (slot.pattern === "date") return fmtDate(v, slot.dateFmt);
+  if (slot.pattern === "number" || slot.pattern === "money") return fmtNum(v, slot.numFmt, slot.dropDec);
+  return v;
+}
+
 /* ---------- 抽出 ---------- */
 function inRegion(it, r){ const cx = it.x + it.w/2, cy = it.y + it.h/2; return cx >= r.x && cx <= r.x+r.w && cy >= r.y && cy <= r.y+r.h; }
 function linesIn(region){
@@ -652,6 +717,7 @@ function extract(slot){
   if (m.mode === "line") found = texts;
   else if (m.mode === "all") found = texts.length ? [texts.join(" ")] : [];
   else for (const t of texts) for (const x of t.matchAll(m.re)) if (x[0].trim()) found.push(x[0].trim());
+  found = found.map(v => formatValue(slot, v));
   if (!found.length) return {status:"nomatch", value:"", note: kw ? `範囲内に「${kw}」のある行で、一致する文字がありません` : "範囲内に一致する文字がありません", found};
   let v;
   if (slot.pick === "last") v = found[found.length-1];
@@ -663,11 +729,11 @@ function extract(slot){
 
 /* ---------- 列の順番・色 ---------- */
 function colLetter(i){ let s = ""; i++; while (i > 0){ const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; }
-function outputOrder(){ return cur.direction === "rtl" ? cur.slots.slice().reverse() : cur.slots.slice(); }
-function colIndexOf(i){ return cur.direction === "rtl" ? cur.slots.length - 1 - i : i; }
+function outputOrder(){ return cur.slots.slice(); }
+function colIndexOf(i){ return i; }
 function posName(ci){ return cur.mode === "multi" ? colLetter(ci) : String(ci + 1); }
 function posFull(ci){ return cur.mode === "multi" ? colLetter(ci) + "列" : (ci + 1) + "番目"; }
-function colorOf(slot){ return COLORS[cur.slots.indexOf(slot) % COLORS.length]; }
+function colorOf(slot){ const i = typeof slot.ci === "number" ? slot.ci : cur.slots.indexOf(slot); return COLORS[i % COLORS.length]; }
 
 /* ---------- 描画：ページ ---------- */
 function drawPage(){
@@ -733,15 +799,12 @@ function renderSlots(){
   const n = cur.slots.length;
   document.getElementById("slotCount").textContent = `${n} 項目`;
   slotlist.innerHTML = cur.slots.map((s, i) => {
-    const ord = cur.direction === "rtl" ? `右から${i+1}` : `左から${i+1}`;
     const c = colorOf(s), id = s.id;
     const head = `
       <div class="slothead">
-        <div class="colno"><b>${posName(colIndexOf(i))}</b><span>${ord}${cur.mode === "multi" ? "列" : "番"}目</span></div>
+        <div class="colno"><button class="grip" data-grip title="ドラッグで並べ替え（キーボードは ↑↓）" aria-label="${i+1}番目。ドラッグまたは上下キーで並べ替え">⠿</button><span class="pos"><b data-pos>${posName(i)}</b><span>${cur.mode === "multi" ? "列" : "番目"}</span></span></div>
         <input type="text" id="${id}-label" data-k="label" value="${esc(s.label)}" placeholder="見出し（例：請求番号）" aria-label="見出し">
         <div class="tools">
-          <button data-act="up" title="ひとつ前へ" aria-label="ひとつ前へ"${i===0?" disabled":""}>↑</button>
-          <button data-act="down" title="ひとつ後へ" aria-label="ひとつ後へ"${i===n-1?" disabled":""}>↓</button>
           <button data-act="del" class="danger" title="この項目を削除" aria-label="この項目を削除">×</button>
         </div>
       </div>`;
@@ -758,6 +821,16 @@ function renderSlots(){
       </div>
       <div class="field"><label for="${id}-pattern">拾う文字の規則</label>
         <select id="${id}-pattern" data-k="pattern">${opts(PATTERNS, s.pattern)}</select></div>
+      <div class="fmtbox"${s.pattern === "date" ? "" : " hidden"}>
+        <div class="field"><label for="${id}-dateFmt">日付の書き方（拾った日付をこの形に直します）</label>
+          <select id="${id}-dateFmt" data-k="dateFmt">${opts(DATEFMTS, s.dateFmt)}</select></div>
+      </div>
+      <div class="fmtbox"${s.pattern === "number" || s.pattern === "money" ? "" : " hidden"}>
+        <div class="field"><label for="${id}-numFmt">${s.pattern === "money" ? "金額の書き方" : "数字の書き方"}</label>
+          <select id="${id}-numFmt" data-k="numFmt">${opts(NUMFMTS, s.numFmt)}</select></div>
+        <label class="check"><input type="checkbox" id="${id}-dropDec" data-k="dropDec"${s.dropDec ? " checked" : ""}> 小数点以下を消す（12.5 → 12）</label>
+        ${s.pattern === "money" ? `<p class="hint">「そのまま」以外では、¥ や 円 などの記号を外して数字だけにします。</p>` : ""}
+      </div>
       <div class="tplbox"${isTpl?"":" hidden"}>
         <label class="flabel" for="${id}-tpl">ターゲットの文字の形　α＝英字　β＝数字　γ＝記号　…＝直前の種類が何文字でも</label>
         <input type="text" class="mono" id="${id}-tpl" data-k="tpl" value="${esc(s.tpl)}" placeholder="例：ααα-ββββ" autocomplete="off" spellcheck="false">
@@ -803,7 +876,7 @@ function updateResults(){
     const r = extract(s);
     const pill = {ok:"取得できた", nomatch:"一致なし", unset:"範囲未設定"}[r.status];
     const txt = r.status === "ok" ? r.value : (r.note || (r.status === "unset" ? "範囲を指定すると、ここに結果が出ます" : ""));
-    let html = `<div class="main"><span class="pill ${r.status}">${pill}</span><span class="val">${esc(txt)}</span></div>`;
+    let html = `<div class="rmain"><span class="pill ${r.status}">${pill}</span><span class="val">${esc(txt)}</span></div>`;
     if (r.found.length > 1 && s.pick !== "all"){
       const sel = s.pick === "last" ? r.found.length - 1 : s.pick === "nth" ? (s.nth|0) - 1 : 0;
       html += `<div class="cands">候補 ${r.found.length} 個：${r.found.slice(0, 12).map((v, i) => `<button data-cand="${i}" class="${i===sel?"on":""}" title="${i+1}番目を使う">${esc(v)}</button>`).join("")}${r.found.length > 12 ? "…" : ""}</div>`;
@@ -879,7 +952,7 @@ function setActive(id, o){
 /* ---------- プリセット ---------- */
 const modeSel = document.getElementById("modeSel"), sepInput = document.getElementById("sepInput"), skipEmpty = document.getElementById("skipEmpty");
 const presetSel = document.getElementById("presetSel"), presetName = document.getElementById("presetName"),
-      dirSel = document.getElementById("dirSel"), saveState = document.getElementById("saveState");
+      saveState = document.getElementById("saveState");
 let dirty = false;
 function renderPresetSel(){
   const names = Object.keys(store.presets).sort((a,b) => a.localeCompare(b, "ja"));
@@ -896,7 +969,7 @@ function setDirty(v){
 function changed(){ if (!dirty) setDirty(true); }
 function openPreset(p, savedAs){
   cur = hydrate(p); cur.__savedAs = savedAs || null; activeId = null;
-  presetName.value = cur.name || ""; dirSel.value = cur.direction;
+  presetName.value = cur.name || "";
   modeSel.value = cur.mode; sepInput.value = cur.sep; skipEmpty.checked = cur.skipEmpty;
   setDirty(false); refreshAll();
 }
@@ -917,7 +990,7 @@ document.getElementById("btnSave").onclick = () => {
 };
 let overwriteArmed = null;
 document.getElementById("btnNew").onclick = () => {
-  openPreset({name:"", direction:cur ? cur.direction : "rtl", mode:cur ? cur.mode : "single", sep:"", skipEmpty:false, slots:[{label:"", type:"extract"}]}, null);
+  openPreset({name:"", direction:"ltr", mode:cur ? cur.mode : "single", sep:"", skipEmpty:false, slots:[{label:"", type:"extract"}]}, null);
   presetName.focus();
 };
 document.getElementById("btnDup").onclick = () => {
@@ -938,7 +1011,6 @@ document.getElementById("btnDel").onclick = e => {
 };
 presetSel.onchange = () => { const n = presetSel.value; if (!n) return; store.last = n; saveStore(); openPreset(store.presets[n], n); };
 presetName.oninput = () => { cur.name = presetName.value; changed(); };
-dirSel.onchange = () => { cur.direction = dirSel.value; changed(); refreshAll(); };
 modeSel.onchange = () => { cur.mode = modeSel.value; changed(); refreshAll(); };
 sepInput.oninput = () => { cur.sep = sepInput.value.replace(/[\t\r\n]/g, ""); changed(); renderTable(); };
 document.getElementById("sepChips").addEventListener("click", e => {
@@ -951,6 +1023,7 @@ skipEmpty.onchange = () => { cur.skipEmpty = skipEmpty.checked; changed(); rende
 slotlist.addEventListener("input", e => {
   const k = e.target.dataset.k; if (!k || e.target.tagName === "SELECT") return;
   const s = slotById(e.target.closest(".slot").dataset.id);
+  if (e.target.type === "checkbox"){ s[k] = e.target.checked; changed(); refreshLive(); return; }
   s[k] = k === "nth" ? Math.max(1, parseInt(e.target.value, 10) || 1) : e.target.value;
   changed();
   if (k === "label"){ drawBoxes(); renderTable(); return; }
@@ -990,8 +1063,6 @@ slotlist.addEventListener("click", e => {
   const id = b.closest(".slot").dataset.id;
   const i = cur.slots.findIndex(x => x.id === id), s = cur.slots[i];
   switch (b.dataset.act){
-    case "up": if (i > 0) [cur.slots[i-1], cur.slots[i]] = [cur.slots[i], cur.slots[i-1]]; break;
-    case "down": if (i < cur.slots.length-1) [cur.slots[i+1], cur.slots[i]] = [cur.slots[i], cur.slots[i+1]]; break;
     case "del": cur.slots.splice(i, 1); if (activeId === id) activeId = null; break;
     case "draw": setActive(activeId === id ? null : id, {scrollPage:true}); return;
     case "toBlank": s.type = "blank"; if (!s.label) s.label = "（空欄）"; if (activeId === id) activeId = null; break;
@@ -1013,10 +1084,69 @@ document.getElementById("outView").addEventListener("dblclick", e => {
   setActive(s.id, {scrollPage:true, scrollCard:true});
 });
 document.getElementById("btnAddExtract").onclick = () => {
-  const s = mk({}); cur.slots.push(s); changed(); setActive(s.id, {scrollCard:true});
+  const s = mk({ci:nextCi()}); cur.slots.push(s); changed(); setActive(s.id, {scrollCard:true});
   const inp = document.getElementById(s.id + "-label"); if (inp) inp.focus({preventScroll:true});
 };
-document.getElementById("btnAddBlank").onclick = () => { cur.slots.push(mk({type:"blank", label:"（空欄）"})); changed(); refreshAll(); };
+document.getElementById("btnAddBlank").onclick = () => { cur.slots.push(mk({type:"blank", label:"（空欄）", ci:nextCi()})); changed(); refreshAll(); };
+
+/* ---------- 項目のドラッグ並べ替え ---------- */
+let sdrag = null;
+function renumber(){
+  [...slotlist.children].forEach((c, i) => { const b = c.querySelector("[data-pos]"); if (b) b.textContent = posName(i); });
+}
+slotlist.addEventListener("pointerdown", e => {
+  const g = e.target.closest("[data-grip]"); if (!g || e.button !== 0) return;
+  e.preventDefault();
+  const card = g.closest(".slot");
+  const before = card.getBoundingClientRect().top;
+  slotlist.classList.add("sorting");
+  const after = card.getBoundingClientRect().top;
+  window.scrollBy(0, after - before);
+  const r = card.getBoundingClientRect();
+  sdrag = {card, g, order:[...slotlist.children].map(c => c.dataset.id).join(), off:Math.min(Math.max(e.clientY - r.top, 8), r.height - 8), ty:0};
+  card.classList.add("dragging");
+  window.addEventListener("pointermove", moveSort);
+  window.addEventListener("pointerup", endSort);
+  window.addEventListener("pointercancel", endSort);
+});
+function moveSort(e){
+  if (!sdrag) return;
+  const {card} = sdrag;
+  let target = null;
+  for (const c of slotlist.children){
+    if (c === card) continue;
+    const r = c.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2){ target = c; break; }
+  }
+  if (card.nextElementSibling !== target){ slotlist.insertBefore(card, target); renumber(); }
+  const nat = card.getBoundingClientRect().top - sdrag.ty;
+  sdrag.ty = e.clientY - sdrag.off - nat;
+  card.style.transform = `translateY(${sdrag.ty}px)`;
+  if (e.clientY < 40) window.scrollBy(0, -12); else if (e.clientY > window.innerHeight - 40) window.scrollBy(0, 12);
+}
+function endSort(){
+  window.removeEventListener("pointermove", moveSort);
+  window.removeEventListener("pointerup", endSort);
+  window.removeEventListener("pointercancel", endSort);
+  if (!sdrag) return;
+  const {card, order} = sdrag; sdrag = null;
+  card.classList.remove("dragging"); card.style.transform = "";
+  slotlist.classList.remove("sorting");
+  const now = [...slotlist.children].map(c => c.dataset.id);
+  if (now.join() !== order){ cur.slots = now.map(slotById); changed(); }
+  refreshAll();
+  const c = slotlist.querySelector(`.slot[data-id="${card.dataset.id}"]`);
+  if (c) c.scrollIntoView({block:"nearest"});
+}
+slotlist.addEventListener("keydown", e => {
+  const g = e.target.closest("[data-grip]"); if (!g || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const id = g.closest(".slot").dataset.id, i = cur.slots.findIndex(s => s.id === id), j = i + (e.key === "ArrowUp" ? -1 : 1);
+  if (j < 0 || j >= cur.slots.length) return;
+  [cur.slots[i], cur.slots[j]] = [cur.slots[j], cur.slots[i]];
+  changed(); refreshAll();
+  const ng = slotlist.querySelector(`.slot[data-id="${id}"] [data-grip]`); if (ng) ng.focus();
+});
 
 /* ---------- ページ上のマウス操作（描く・動かす・大きさを変える） ---------- */
 let drag = null;
@@ -1179,12 +1309,12 @@ const FAQ = [
   ["PDF", "用紙サイズが違うPDFでも同じ場所を拾えますか？", "<p>範囲はページの幅・高さに対する割合で覚えているので、A4とレターのように少し違う程度なら同じ場所を指します。ただし、レイアウト自体が違う帳票では、別の設定を作ってください。</p>"],
 
   ["範囲の指定", "範囲はどうやって指定しますか？", "<ul><li>項目カードの余白をダブルクリックします（または「範囲を指定する」ボタン）。</li><li>左のページ上をドラッグして、拾いたい場所を囲みます。</li><li>終わったら <kbd>Esc</kbd> か「指定を終える」を押します。</li></ul>"],
-  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（番号や結果が表示されているあたり）をダブルクリックしてください。下の「Excelに貼り付けたときの形」の項目をダブルクリックしても入れます。空欄の項目は範囲を持たないので、指定に入りません。</p>"],
+  ["範囲の指定", "ダブルクリックしても範囲の指定に入りません。", "<p>入力欄やボタンの上ではなく、カードの<b>余白</b>（結果が表示されているあたり）をダブルクリックしてください。上の「Excelに貼り付けたときの形」の項目をダブルクリックしても入れます。空欄の項目は範囲を持たないので、指定に入りません。</p>"],
   ["範囲の指定", "枠の位置や大きさを直したい。", "<ul><li>枠の中をドラッグすると移動します。</li><li>四隅と辺の小さな四角をドラッグすると大きさが変わります。</li><li>矢印キーで少しずつ移動、<kbd>Shift</kbd>＋矢印キーで少しずつ大きさを変えられます。</li><li>枠の外をドラッグすると、最初から引き直せます。</li></ul>"],
   ["範囲の指定", "細かい場所がうまく囲めません。", "<p>「＋」で拡大してから囲んでください。<kbd>Ctrl</kbd>を押しながらマウスホイールを回しても拡大・縮小できます。「幅に合わせる」「全体を表示」で元の大きさに戻せます。</p>"],
   ["範囲の指定", "どこまで囲めば、その文字が範囲に入りますか？", "<p>文字のかたまりの<b>中心</b>が枠の中にあれば、範囲に入ったと判定します。範囲指定中は、範囲に入った文字が薄く色付きで表示されるので、それを目安にしてください。</p>"],
   ["範囲の指定", "範囲を少し広めに取ってもいいですか？", "<p>はい。拾う文字の規則（日付・金額・その他など）で絞り込むので、多少広めに囲んでも大丈夫です。月によって位置が少しずれる帳票では、広めに取っておくほうが安定します。</p>"],
-  ["範囲の指定", "枠の色や番号は何を表していますか？", "<p>色は項目ごとの色です。項目カードの左端、ページ上の枠、下のプレビューの下線が同じ色で対応しています。枠の上の番号は、アウトプットの何番目か（列ごとに分ける場合はExcelの列）を表します。</p>"],
+  ["範囲の指定", "枠の色や番号は何を表していますか？", "<p>色は項目ごとの色です。項目カードの左端、ページ上の枠、上のプレビューの下線が同じ色で対応しています。順番を入れ替えても、項目の色は変わりません。枠の上の番号は、アウトプットの何番目か（列ごとに分ける場合はExcelの列）を表します。</p>"],
 
   ["拾う文字の規則", "「拾う文字の規則」はどれを選べばいいですか？", "<ul><li>日付・金額・郵便番号・電話番号：その形の文字だけを拾います。</li><li>範囲内の1行ずつ：囲んだ場所の行をそのまま拾います。会社名など決まった形がないものに向きます。</li><li>その他：α・β・γ で文字の形を自分で作ります。品番や請求番号に向きます。</li></ul>"],
   ["拾う文字の規則", "「その他」の α・β・γ とは何ですか？", "<ul><li>α：英字1文字（A〜Z、a〜z）</li><li>β：数字1文字（0〜9）</li><li>γ：記号1文字（- / . ¥ # % など）</li><li>…：直前の種類が1文字以上いくつでも続く</li></ul><p>例：<code>ααα-ββββ-ββββ</code> は INV-2026-0142 のような文字を拾います。</p>"],
@@ -1194,6 +1324,13 @@ const FAQ = [
   ["拾う文字の規則", "全角の数字や英字も拾えますか？", "<p>拾えます。PDFの文字は全角・半角をそろえてから探すので、「ＡＢ－１２０３」も「AB-1203」として見つかります。</p>"],
   ["拾う文字の規則", "長い番号の一部だけが拾われてしまわないか心配です。", "<p>英字や数字で始まる・終わる形は、前後に同じ種類の文字が続いている場合は拾いません。例えば <code>ββββ</code> は 1234567 の中の 1234 を拾いません。</p>"],
   ["拾う文字の規則", "入力した形が正しいか確かめたい。", "<p>入力欄の下に、形の説明（英字 3文字、「-」、数字 4文字…）と「例」が出ます。また、項目カードの下に実際に拾えた文字が出るので、そこで確認してください。</p>"],
+  ["日付・数字の書き方", "拾った日付の書き方を変えられますか？", "<p>「拾う文字の規則」で「日付」を選ぶと、「日付の書き方」が出ます。例えば 2026年10月15日 を拾って、次のように直してアウトプットできます。</p><ul><li>2026/10/15、2026/1/5（0を付けない）</li><li>2026-10-15、2026.10.15</li><li>20261015</li><li>2026年10月15日、2026年01月05日</li><li>令和8年10月15日（和暦）</li></ul><p>「そのまま」を選ぶと、PDFの書き方のまま出します。</p>"],
+  ["日付・数字の書き方", "PDFの日付が和暦や 20261015 の形でも拾えますか？", "<p>拾えます。「令和8年10月15日」「平成31年4月1日」「20261015」なども日付として見つけ、選んだ書き方に直します。</p>"],
+  ["日付・数字の書き方", "存在しない日付はどうなりますか？", "<p>2026/2/30 のようなありえない日付は、書き方を直さずにそのまま出します。PDFの値を確認してください。</p>"],
+  ["日付・数字の書き方", "数字にカンマを付けたり外したりできますか？", "<p>「拾う文字の規則」で「数字」（または「金額」）を選ぶと、「数字の書き方」が出ます。</p><ul><li>カンマを付ける：1234567 → 1,234,567</li><li>カンマを外す：1,234,567 → 1234567</li><li>そのまま：PDFの書き方のまま</li></ul>"],
+  ["日付・数字の書き方", "小数点以下を消したい。", "<p>「小数点以下を消す」にチェックを入れます。12.5 → 12、1,234.56 → 1,234 のように、小数点より後ろを切り捨てます（四捨五入はしません）。</p>"],
+  ["日付・数字の書き方", "金額の ¥ や 円 を外したい。", "<p>「金額」を選び、「金額の書き方」を「カンマを付ける」か「カンマを外す」にすると、¥ や 円 を外して数字だけにします。「そのまま」なら記号も残ります。</p>"],
+  ["日付・数字の書き方", "「カンマを付ける」で先頭の0はどうなりますか？", "<p>0012 のような先頭の0は外れて 12 になります。番号として先頭の0を残したい場合は、「そのまま」か「カンマを外す」を選んでください。</p>"],
   ["拾う文字の規則", "「目印の言葉で絞り込む」はどう使いますか？", "<p>範囲の中で、目印の言葉がある行だけを対象にします。「目印から見て右側の文字」を選ぶと、その言葉より右にある文字から拾います。例：目印「お支払期限」＋右側＋日付 → 支払期限の日付だけを拾います。</p>"],
   ["拾う文字の規則", "正規表現は使えますか？", "<p>「正規表現（上級者向け）」を選ぶと直接入力できます。普段は「その他」で十分です。</p>"],
 
@@ -1206,8 +1343,9 @@ const FAQ = [
   ["アウトプットの形", "区切り記号には何が使えますか？", "<p>好きな文字を入れられます（最大20文字）。「/」「・」「-」「、」などはボタンでも選べます。「 / 」のように空白を含めたり、「＞＞」のように2文字以上にしたりもできます。タブと改行は使えません。</p>"],
   ["アウトプットの形", "区切り記号を空欄にするとどうなりますか？", "<p>項目と項目の間に何も入れず、すき間なく続けて並べます。例：<code>INV-2026-01422026年10月15日</code>。プレビューでは、どこからどこまでがどの項目かを色の下線で確認できます。</p>"],
   ["アウトプットの形", "「空の項目は、区切り記号ごと省く」とは？", "<p>取れなかった項目や空欄の項目を、区切り記号と一緒に取り除く設定です。</p><ul><li>オフ（標準）：<code>A//C</code>（位置がずれない）</li><li>オン：<code>A/C</code>（詰めて並べる）</li></ul><p>後でExcelの「区切り位置」で分ける予定なら、オフのままにしてください。</p>"],
-  ["アウトプットの形", "「アウトプットの右端から」「左端から」の違いは？", "<p>項目カードを上から設定していくとき、アウトプットの右端から決めるか、左端から決めるかの違いです。「右端から」の場合、一番上のカードがアウトプットの一番右（最後）になります。各カードの左上の番号が、アウトプットの何番目かを表します。</p>"],
-  ["アウトプットの形", "項目の順番を入れ替えたい。", "<p>項目カードの右上の「↑」「↓」で入れ替えます。「×」で削除します。結果は下のプレビューにすぐ反映されます。</p>"],
+  ["アウトプットの形", "項目の順番はどう決まりますか？", "<p>項目カードの<b>一番上が1番目</b>で、アウトプットの先頭（一番左）になります。下にいくほど後ろに並びます。各カードの左上の番号が、アウトプットの何番目かを表します。</p>"],
+  ["アウトプットの形", "項目の順番を入れ替えたい。", "<p>項目カードの左上の <b>⠿</b> をつかんで、上下にドラッグします。ドラッグ中はカードが小さくたたまれ、番号はすぐに付け直されます。キーボードでは ⠿ を選んで <kbd>↑</kbd><kbd>↓</kbd> キーで動かせます。「×」で削除します。</p>"],
+  ["アウトプットの形", "以前「右端から」で作った設定はどうなりますか？", "<p>開いたときに、1番目が一番上に来るよう自動で並べ直します。アウトプットの中身や順番は変わりません。</p>"],
   ["アウトプットの形", "空欄の項目は何に使いますか？", "<p>あとで手入力する部分など、PDFから取らない項目の位置を空けておくために使います。区切り記号が「/」なら <code>A//C</code> のように位置だけが残ります。「＋ 空欄の項目を追加」か、カードの「空欄の項目に変える」で作れます。</p>"],
   ["アウトプットの形", "以前のように列ごとに分けて貼り付けたい。", "<p>「貼り付け方」を「列ごとに分ける（A1・B1・C1…）」に変えてください。項目ごとに別のセルに入ります。この設定もPDFの種類ごとに保存されます。</p>"],
   ["アウトプットの形", "見出しは何に使いますか？", "<p>画面上で項目を見分けるための名前です。「見出し行も一緒にコピー」にチェックを入れると、1つのセルにまとめる場合は見出しを区切り記号でつないだものがA1、値がA2に入ります。</p>"],
